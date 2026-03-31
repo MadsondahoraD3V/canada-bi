@@ -5,62 +5,55 @@ import re
 import pandas as pd
 import unicodedata
 from decimal import Decimal
-from datetime import datetime
 
 # ==========================================
-# 1. CONFIGURAÇÕES VISUAIS (INTERFACE)
+# 1. CONFIGURAÇÕES VISUAIS
 # ==========================================
-st.set_page_config(page_title="Canadá BI - Dashboard Web", layout="wide")
+st.set_page_config(page_title="Canadá BI - Dashboard", layout="wide")
 
-# CSS para manter a identidade visual (Fundo escuro e Rodapé fixo)
 st.markdown("""
     <style>
     .main { background-color: #020617; }
     .footer {
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        background-color: #000000;
-        color: #64748b;
-        text-align: center;
-        padding: 10px;
-        font-size: 14px;
-        border-top: 1px solid #1e293b;
-        z-index: 100;
+        position: fixed; left: 0; bottom: 0; width: 100%;
+        background-color: #000000; color: #64748b; text-align: center;
+        padding: 10px; font-size: 14px; border-top: 1px solid #1e293b; z-index: 100;
     }
     </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. MOTOR DE INTELIGÊNCIA (CATEGORIZAÇÃO)
+# 2. FUNÇÕES DE LIMPEZA E INTELIGÊNCIA
 # ==========================================
 def remover_acentos(texto):
     return ''.join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn').upper()
 
 def formatar_moeda(valor):
-    v_str = f"{valor:,.2f}"
-    return v_str.replace(',', 'X').replace('.', ',').replace('X', '.')
+    return f"R$ {float(valor):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+def limpar_nome_produto(nome_bruto):
+    """Remove códigos e datas (ex: 042235 20-mar) do nome do produto."""
+    # Remove sequências de 6 dígitos (códigos)
+    nome = re.sub(r'\b\d{5,8}\b', '', nome_bruto)
+    # Remove datas no formato 20-mar ou 20-mar-2026
+    nome = re.sub(r'\d{1,2}-[a-zA-Z]{3}(-\d{2,4})?', '', nome)
+    # Remove espaços extras e caracteres sobrando
+    return nome.strip()
 
 def palpite_categoria(nome):
-    txt = remover_acentos(str(nome)).strip()
-    # Categorização idêntica à do projeto desktop
-    if "SEDA" in txt and any(p in txt for p in ["SHAMPOO", "COND", "CREME"]): return "Mercearia"
-    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "LANDUS", "TREVO", "ISQUEIRO", "ROTHMANS"]): return "Tabacaria"
-    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL"]): return "Bebidas Alcoólicas"
-    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE"]): return "Bomboniere"
-    if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO", "ESTOMAZIL"]): return "Remédios"
+    txt = remover_acentos(nome)
+    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY"]): return "Tabacaria"
+    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BEBIDA"]): return "Bebidas Alcoólicas"
+    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "BALA"]): return "Bomboniere"
+    if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO", "ESTOMAZIL", "REMEDIO"]): return "Remédios"
     return "Mercearia"
 
 # ==========================================
-# 3. SISTEMA DE LOGIN
+# 3. LOGIN (DADOS CORRIGIDOS)
 # ==========================================
 credentials = {
     "usernames": {
-        "madson": {
-            "name": "Madson da Hora",
-            "password": "admin123" # Altere sua senha aqui se desejar
-        }
+        "madson": {"name": "Madson da Hora", "password": "admin123"}
     }
 }
 
@@ -68,30 +61,24 @@ authenticator = stauth.Authenticate(credentials, "canada_bi_cookie", "auth_key_2
 authenticator.login()
 
 # ==========================================
-# 4. EXECUÇÃO DO DASHBOARD (PÓS-LOGIN)
+# 4. DASHBOARD
 # ==========================================
 if st.session_state["authentication_status"]:
     st.sidebar.title(f"👤 {st.session_state['name']}")
-    authenticator.logout("Sair do Sistema", "sidebar")
+    authenticator.logout("Sair", "sidebar")
     
     st.title("🇨🇦 Dashboard Canadá BI")
-    st.markdown("---")
-
-    # Upload do arquivo (Substitui o botão de selecionar pasta do Windows)
-    uploaded_file = st.file_uploader("Arraste o relatório de venda detalhada (PDF) aqui", type="pdf")
+    uploaded_file = st.file_uploader("Upload do PDF", type="pdf")
 
     if uploaded_file:
         dados_agrupados = {}
-        periodo_venda = "Não identificado"
+        periodo = "Identificando..."
         
         with pdfplumber.open(uploaded_file) as pdf:
-            # Captura da data do período
             primeira_pag = pdf.pages[0].extract_text()
-            match_data = re.search(r'(\d{2}/\d{2}/\d{4})\s*[AÀaà]\s*(\d{2}/\d{2}/\d{4})', primeira_pag or "")
-            if match_data:
-                periodo_venda = f"{match_data.group(1)} a {match_data.group(2)}"
+            match_d = re.search(r'(\d{2}/\d{2}/\d{4})\s*[AÀaà]\s*(\d{2}/\d{2}/\d{4})', primeira_pag or "")
+            if match_d: periodo = f"{match_d.group(1)} a {match_d.group(2)}"
 
-            # Extração de dados por linha
             for page in pdf.pages:
                 linhas = page.extract_text().split('\n')
                 for linha in linhas:
@@ -103,77 +90,61 @@ if st.session_state["authentication_status"]:
                         if ean_match and len(valores) >= 4:
                             ean = ean_match.group()
                             match_n = re.search(r'(.+?)\s+(?:UN|KG)\s+\d+,\d{2}', linha_limpa)
-                            nome_bruto = match_n.group(1).replace(ean, '').strip() if match_n else "Produto"
+                            nome_bruto = match_n.group(1).replace(ean, '').strip() if match_n else "PRODUTO"
+                            
+                            # AQUI ESTÁ A CORREÇÃO: Limpamos o nome antes de guardar
+                            nome_final = limpar_nome_produto(nome_bruto)
                             
                             qtde = Decimal(valores[0].replace(',', '.'))
-                            valor_venda = Decimal(valores[-4].replace(',', '.'))
-                            categoria = palpite_categoria(nome_bruto)
+                            valor_total = Decimal(valores[-4].replace(',', '.'))
+                            cat = palpite_categoria(nome_final)
                             
-                            # Agrupamento de itens idênticos
                             if ean in dados_agrupados:
                                 dados_agrupados[ean]['Qtde'] += qtde
-                                dados_agrupados[ean]['ValorTotal'] += valor_venda
+                                dados_agrupados[ean]['Valor'] += valor_total
                             else:
-                                dados_agrupados[ean] = {
-                                    "Nome": nome_bruto,
-                                    "Categoria": categoria,
-                                    "Qtde": qtde,
-                                    "ValorTotal": valor_venda
-                                }
+                                dados_agrupados[ean] = {"Nome": nome_final, "Cat": cat, "Qtde": qtde, "Valor": valor_total}
                     except: continue
 
-        # --- EXIBIÇÃO DOS RESULTADOS ---
-        st.success(f"📅 Período identificado: {periodo_venda}")
+        # --- EXIBIÇÃO ---
+        st.info(f"📅 Período: {periodo}")
         
-        # Criação das colunas idênticas ao painel anterior
-        ordem_cats = ["Tabacaria", "Bebidas Alcoólicas", "Bomboniere", "Remédios", "Mercearia"]
-        colunas_kanban = st.columns(len(ordem_cats))
+        # Converte para DataFrame para os gráficos
+        df = pd.DataFrame(list(dados_agrupados.values()))
+        df['Valor'] = df['Valor'].apply(float)
 
-        total_geral = Decimal("0.00")
+        # Gráficos Corrigidos
+        col_g1, col_g2 = st.columns([1, 1])
+        with col_g1:
+            st.subheader("Top 10 Produtos")
+            top10 = df.nlargest(10, 'Valor')
+            st.bar_chart(data=top10, x="Nome", y="Valor", color="#38bdf8")
 
-        for i, nome_c in enumerate(ordem_cats):
-            with colunas_kanban[i]:
-                # Filtra os itens da categoria atual
-                itens_cat = [v for v in dados_agrupados.values() if v['Categoria'] == nome_c]
-                soma_valor = sum(item['ValorTotal'] for item in itens_cat)
-                total_geral += soma_valor
-                
-                # Cabeçalho da Coluna
-                st.info(f"**{nome_c.upper()}**")
-                st.subheader(formatar_moeda(soma_valor))
-                
-                # Lista de itens (Versão compacta)
-                with st.expander("Ver Itens"):
-                    for item in itens_cat:
-                        st.markdown(f"**{item['Nome']}**")
-                        st.caption(f"{float(item['Qtde'])} un | {formatar_moeda(item['ValorTotal'])}")
-                        st.write("---")
+        with col_g2:
+            st.subheader("Faturamento por Categoria")
+            resumo_cat = df.groupby('Cat')['Valor'].sum().reset_index()
+            # Correção do erro da linha 167: Passando o DataFrame inteiro
+            st.pie_chart(data=resumo_cat, values="Valor", names="Cat")
 
-        # --- GRÁFICOS DE APOIO ---
+        # Painel Kanban
         st.divider()
-        col_graf1, col_graf2 = st.columns(2)
+        cats = ["Tabacaria", "Bebidas Alcoólicas", "Bomboniere", "Remédios", "Mercearia"]
+        colunas = st.columns(len(cats))
         
-        df_completo = pd.DataFrame(list(dados_agrupados.values()))
-        df_completo['ValorTotal'] = df_completo['ValorTotal'].apply(float)
+        for i, c_nome in enumerate(cats):
+            with colunas[i]:
+                itens = df[df['Cat'] == c_nome]
+                total_cat = itens['Valor'].sum()
+                st.metric(c_nome.upper(), formatar_moeda(total_cat))
+                with st.expander("Ver Detalhes"):
+                    for _, row in itens.iterrows():
+                        st.caption(f"**{row['Nome']}**")
+                        st.write(f"R$ {row['Valor']:.2f}")
 
-        with col_graf1:
-            st.write("### Top 10 Produtos")
-            top_10 = df_completo.nlargest(10, 'ValorTotal')
-            st.bar_chart(data=top_10, x="Nome", y="ValorTotal", color="#38bdf8")
-
-        with col_graf2:
-            st.write("### Faturamento por Grupo")
-            resumo_cat = df_completo.groupby('Categoria')['ValorTotal'].sum()
-            st.pie_chart(resumo_cat)
-
-        # Grande Total Final
         st.divider()
-        st.header(f"💰 CAIXA TOTAL BRUTO: {formatar_moeda(total_geral)}")
+        st.header(f"💰 TOTAL GERAL: {formatar_moeda(df['Valor'].sum())}")
 
-    # Rodapé fixo com sua assinatura
-    st.markdown(f'<div class="footer">Desenvolvido por <b>@Madson_da_hora</b> - Data Analyst e Programador / Todos os direitos Reservados</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">Desenvolvido por <b>@Madson_da_hora</b> - Data Analyst / Todos os direitos Reservados</div>', unsafe_allow_html=True)
 
 elif st.session_state["authentication_status"] is False:
-    st.error("Usuário ou senha inválidos.")
-elif st.session_state["authentication_status"] is None:
-    st.warning("Por favor, faça login para acessar o sistema.")
+    st.error("Login inválido.")
