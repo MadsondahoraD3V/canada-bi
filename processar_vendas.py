@@ -56,7 +56,7 @@ def palpite_categoria(nome):
 def processar_pdf(file):
     dados = []
     with pdfplumber.open(file) as pdf:
-        txt_topo = pdf.pages[0].extract_text() or ""
+        txt_topo = (pdf.pages[0].extract_text() or "")
         match_d = re.search(r'(\d{2}/\d{2}/\d{4})\s*[AÀaà]\s*(\d{2}/\d{2}/\d{4})', txt_topo)
         periodo = f"{match_d.group(1)} a {match_d.group(2)}" if match_d else "DATA DESCONHECIDA"
         for page in pdf.pages:
@@ -75,7 +75,7 @@ def processar_pdf(file):
     return dados, periodo
 
 # ==========================================
-# 3. SEGURANÇA (LOGINS CORRIGIDOS)
+# 3. SEGURANÇA (LOGINS)
 # ==========================================
 credentials = {
     "usernames": {
@@ -86,15 +86,16 @@ credentials = {
     }
 }
 
+# Criar objeto de autenticação
 authenticator = stauth.Authenticate(credentials, "canada_bi_cookie", "auth_key_2026", expiry_days=30)
 
-# CORREÇÃO DA LINHA 91: Usando parâmetros nomeados para evitar erro de localização
-# name, auth_status, username = authenticator.login("Login", "main") # ANTIGO (COM ERRO)
-name, auth_status, username = authenticator.login(location='main') # NOVO (CORRIGIDO)
+# CORREÇÃO DEFINITIVA: A função login() não retorna mais valores diretamente
+authenticator.login(location='main')
 
-if auth_status:
+# Verificamos o status do login através do session_state do Streamlit
+if st.session_state["authentication_status"]:
     # --- MENU DE NAVEGAÇÃO ---
-    st.sidebar.title(f"👤 {name}")
+    st.sidebar.title(f"👤 {st.session_state['name']}")
     pagina = st.sidebar.radio("Navegação", ["📊 Painel Individual", "🚀 Upload em Lote"])
     authenticator.logout("Sair", "sidebar")
 
@@ -105,6 +106,7 @@ if auth_status:
             dados, per = processar_pdf(file)
             df = pd.DataFrame(dados)
             st.info(f"📅 Período: {per}")
+            
             cats = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
             cols = st.columns(len(cats))
             selecionadas = []
@@ -113,6 +115,7 @@ if auth_status:
                     if st.checkbox(c, value=True, key=f"s_{c}"): selecionadas.append(c)
                     v = df[df['Cat'] == c]['Valor'].sum()
                     st.markdown(f'<div class="cat-card"><div class="cat-title">{c}</div><div class="cat-value">{formatar_moeda(v)}</div></div>', unsafe_allow_html=True)
+            
             soma_f = df[df['Cat'].isin(selecionadas)]['Valor'].sum()
             st.markdown(f'<div class="floating-sum">SELECIONADO<br>{formatar_moeda(soma_f)}</div>', unsafe_allow_html=True)
 
@@ -133,9 +136,9 @@ if auth_status:
                         resultados.append({"arquivo": f.name, "status": "❌ Erro", "total": 0})
                 st.table(pd.DataFrame(resultados))
 
-    st.markdown('<div class="footer">Canadá BI v6.1 | Madson da Hora Analyst</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">Canadá BI v6.2 | Madson da Hora Analyst</div>', unsafe_allow_html=True)
 
-elif auth_status is False:
-    st.error("Login/Senha incorretos")
-elif auth_status is None:
+elif st.session_state["authentication_status"] is False:
+    st.error("Login ou Senha incorretos.")
+elif st.session_state["authentication_status"] is None:
     st.warning("Por favor, insira suas credenciais.")
