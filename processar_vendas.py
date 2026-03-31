@@ -5,7 +5,6 @@ import re
 import pandas as pd
 import unicodedata
 from decimal import Decimal
-import time
 
 # ==========================================
 # 1. CONFIGURAÇÕES VISUAIS E CSS
@@ -55,7 +54,6 @@ def palpite_categoria(nome):
 
 def processar_pdf(file):
     dados = []
-    # Voltamos ao início do arquivo para garantir leitura total
     file.seek(0)
     with pdfplumber.open(file) as pdf:
         txt_topo = (pdf.pages[0].extract_text() or "")
@@ -77,7 +75,7 @@ def processar_pdf(file):
     return dados, periodo
 
 # ==========================================
-# 3. SEGURANÇA (LOGINS)
+# 3. SEGURANÇA (LOGINS SOLICITADOS)
 # ==========================================
 credentials = {
     "usernames": {
@@ -88,21 +86,22 @@ credentials = {
     }
 }
 
-authenticator = stauth.Authenticate(credentials, "canada_bi_cookie", "auth_key_2026", expiry_days=30)
+# Chave de cookie com pelo menos 32 caracteres para evitar avisos de segurança
+authenticator = stauth.Authenticate(credentials, "canada_bi_cookie_secure_key_32_chars", "secret_key_123456", expiry_days=30)
+
+# CORREÇÃO: Chamada simples da função login
 authenticator.login(location='main')
 
-if st.session_state["authentication_status"]:
+# Verificação via session_state
+if st.session_state.get("authentication_status"):
     st.sidebar.title(f"👤 {st.session_state['name']}")
     pagina = st.sidebar.radio("Navegação", ["📊 Painel Individual", "🚀 Upload em Lote"])
     authenticator.logout("Sair", "sidebar")
 
-    # ==========================================
-    # PÁGINA 1: PAINEL INDIVIDUAL
-    # ==========================================
+    # --- PÁGINA INDIVIDUAL ---
     if pagina == "📊 Painel Individual":
         st.title("📊 Análise Individual")
         
-        # Lógica para esconder o uploader
         if 'arquivo_carregado' not in st.session_state:
             st.session_state.arquivo_carregado = None
 
@@ -112,22 +111,14 @@ if st.session_state["authentication_status"]:
                 st.session_state.arquivo_carregado = file
                 st.rerun()
         else:
-            # MOSTRA CONTEÚDO E OPÇÕES DE ARQUIVO
             file = st.session_state.arquivo_carregado
-            col_btn1, col_btn2 = st.columns([1, 5])
-            
-            with col_btn1:
+            c_btn1, c_btn2 = st.columns([1, 5])
+            with c_btn1:
                 if st.button("🗑️ Remover PDF"):
                     st.session_state.arquivo_carregado = None
                     st.rerun()
-            
-            with col_btn2:
-                st.download_button(
-                    label="📥 Baixar PDF Original",
-                    data=file,
-                    file_name=file.name,
-                    mime="application/pdf"
-                )
+            with c_btn2:
+                st.download_button(label="📥 Baixar PDF Original", data=file, file_name=file.name, mime="application/pdf")
 
             dados, per = processar_pdf(file)
             df = pd.DataFrame(dados)
@@ -145,12 +136,9 @@ if st.session_state["authentication_status"]:
             soma_f = df[df['Cat'].isin(selecionadas)]['Valor'].sum()
             st.markdown(f'<div class="floating-sum">SELECIONADO<br>{formatar_moeda(soma_f)}</div>', unsafe_allow_html=True)
 
-    # ==========================================
-    # PÁGINA 2: UPLOAD EM LOTE
-    # ==========================================
+    # --- PÁGINA EM LOTE ---
     else:
         st.title("🚀 Processamento em Lote")
-        # No lote mantemos visível para gerenciar os arquivos
         batch_files = st.file_uploader("Upload em Lote (Máx 7)", type="pdf", accept_multiple_files=True)
         if batch_files:
             if len(batch_files) > 7: st.error("Máximo 7 arquivos.")
@@ -166,7 +154,9 @@ if st.session_state["authentication_status"]:
                         resultados.append({"arquivo": f.name, "status": "❌ Erro", "total": 0})
                 st.table(pd.DataFrame(resultados))
 
-    st.markdown('<div class="footer">Canadá BI v6.3 | Madson da Hora Analyst</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">Canadá BI v6.4 | Madson da Hora Analyst</div>', unsafe_allow_html=True)
 
-elif st.session_state["authentication_status"] is False:
+elif st.session_state.get("authentication_status") is False:
     st.error("Login ou Senha incorretos.")
+elif st.session_state.get("authentication_status") is None:
+    st.warning("Por favor, insira suas credenciais.")
