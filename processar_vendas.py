@@ -35,7 +35,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. FUNÇÕES CORE (LÓGICA REUTILIZÁVEL)
+# 2. FUNÇÕES CORE
 # ==========================================
 def formatar_moeda(valor):
     return f"R$ {float(valor):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
@@ -54,13 +54,11 @@ def palpite_categoria(nome):
     return "Mercearia"
 
 def processar_pdf(file):
-    """Lógica central de leitura de cada PDF."""
     dados = []
     with pdfplumber.open(file) as pdf:
         txt_topo = pdf.pages[0].extract_text() or ""
         match_d = re.search(r'(\d{2}/\d{2}/\d{4})\s*[AÀaà]\s*(\d{2}/\d{2}/\d{4})', txt_topo)
         periodo = f"{match_d.group(1)} a {match_d.group(2)}" if match_d else "DATA DESCONHECIDA"
-        
         for page in pdf.pages:
             linhas = (page.extract_text() or "").split('\n')
             for linha in linhas:
@@ -69,14 +67,15 @@ def processar_pdf(file):
                     if len(valores) >= 4:
                         ean_m = re.search(r'\b\d{8,14}\b', linha)
                         nome_m = re.search(r'(.+?)\s+(?:UN|KG)\s+\d+,\d{2}', linha)
-                        nome_limpo = limpar_nome_produto(nome_m.group(1).replace(ean_m.group() if ean_m else "", "").strip())
+                        n_bruto = nome_m.group(1).replace(ean_m.group() if ean_m else "", "").strip()
+                        nome_limpo = limpar_nome_produto(n_bruto)
                         val = float(valores[-4].replace(',', '.'))
                         dados.append({"Nome": nome_limpo, "Cat": palpite_categoria(nome_limpo), "Valor": val, "Periodo": periodo})
                 except: continue
     return dados, periodo
 
 # ==========================================
-# 3. SEGURANÇA (LOGIN)
+# 3. SEGURANÇA (LOGINS CORRIGIDOS)
 # ==========================================
 credentials = {
     "usernames": {
@@ -88,7 +87,10 @@ credentials = {
 }
 
 authenticator = stauth.Authenticate(credentials, "canada_bi_cookie", "auth_key_2026", expiry_days=30)
-name, auth_status, username = authenticator.login("Login", "main")
+
+# CORREÇÃO DA LINHA 91: Usando parâmetros nomeados para evitar erro de localização
+# name, auth_status, username = authenticator.login("Login", "main") # ANTIGO (COM ERRO)
+name, auth_status, username = authenticator.login(location='main') # NOVO (CORRIGIDO)
 
 if auth_status:
     # --- MENU DE NAVEGAÇÃO ---
@@ -96,20 +98,13 @@ if auth_status:
     pagina = st.sidebar.radio("Navegação", ["📊 Painel Individual", "🚀 Upload em Lote"])
     authenticator.logout("Sair", "sidebar")
 
-    # ==========================================
-    # PÁGINA 1: PAINEL INDIVIDUAL
-    # ==========================================
     if pagina == "📊 Painel Individual":
         st.title("📊 Análise Individual")
-        file = st.file_uploader("Arraste um PDF para análise detalhada", type="pdf", key="single")
-        
+        file = st.file_uploader("Arraste um PDF", type="pdf", key="single")
         if file:
             dados, per = processar_pdf(file)
             df = pd.DataFrame(dados)
-            
             st.info(f"📅 Período: {per}")
-            
-            # Soma Flutuante
             cats = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
             cols = st.columns(len(cats))
             selecionadas = []
@@ -118,69 +113,29 @@ if auth_status:
                     if st.checkbox(c, value=True, key=f"s_{c}"): selecionadas.append(c)
                     v = df[df['Cat'] == c]['Valor'].sum()
                     st.markdown(f'<div class="cat-card"><div class="cat-title">{c}</div><div class="cat-value">{formatar_moeda(v)}</div></div>', unsafe_allow_html=True)
-            
             soma_f = df[df['Cat'].isin(selecionadas)]['Valor'].sum()
             st.markdown(f'<div class="floating-sum">SELECIONADO<br>{formatar_moeda(soma_f)}</div>', unsafe_allow_html=True)
 
-    # ==========================================
-    # PÁGINA 2: UPLOAD EM LOTE
-    # ==========================================
     else:
         st.title("🚀 Processamento em Lote")
-        st.write("Selecione até 7 arquivos para processamento simultâneo e geração de relatórios.")
-        
-        batch_files = st.file_uploader("Upload em Lote", type="pdf", accept_multiple_files=True, key="batch")
-        
+        batch_files = st.file_uploader("Upload em Lote (Máx 7)", type="pdf", accept_multiple_files=True)
         if batch_files:
-            if len(batch_files) > 7:
-                st.error("⚠️ Máximo de 7 arquivos permitido.")
+            if len(batch_files) > 7: st.error("Máximo 7 arquivos.")
             else:
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                log_container = st.container()
-                
-                sucessos = 0
-                erros = 0
-                lista_resultados = []
-
+                progress = st.progress(0)
+                resultados = []
                 for i, f in enumerate(batch_files):
-                    # Atualiza Barra de Progresso
-                    percentual = (i + 1) / len(batch_files)
-                    progress_bar.progress(percentual)
-                    status_text.text(f"Processando: {f.name}...")
-                    
+                    progress.progress((i + 1) / len(batch_files))
                     try:
                         dados, per = processar_pdf(f)
-                        if not dados: raise Exception("PDF sem dados compatíveis")
-                        
-                        total = sum(d['Valor'] for d in dados)
-                        lista_resultados.append({"arquivo": f.name, "status": "✅ Sucesso", "periodo": per, "total": total})
-                        sucessos += 1
-                    except Exception as e:
-                        lista_resultados.append({"arquivo": f.name, "status": "❌ Erro", "periodo": "---", "total": 0})
-                        erros += 1
-                    
-                    time.sleep(0.5) # Apenas para visualização do progresso
+                        resultados.append({"arquivo": f.name, "status": "✅ Sucesso", "total": sum(d['Valor'] for d in dados)})
+                    except:
+                        resultados.append({"arquivo": f.name, "status": "❌ Erro", "total": 0})
+                st.table(pd.DataFrame(resultados))
 
-                # Relatório Final
-                st.divider()
-                st.subheader("📝 Relatório de Processamento")
-                
-                col_s, col_e = st.columns(2)
-                col_s.metric("Sucessos", sucessos)
-                col_e.metric("Falhas", erros, delta_color="inverse")
-
-                # Tabela de Detalhes
-                resumo_df = pd.DataFrame(lista_resultados)
-                st.table(resumo_df)
-                
-                if erros > 0:
-                    st.warning(f"Atenção: {erros} arquivo(s) apresentaram problemas de leitura.")
-                else:
-                    st.balloons()
-                    st.success("Todos os arquivos foram processados com perfeição!")
-
-    st.markdown('<div class="footer">Canadá BI v6.0 | Dashboard & Batch System</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">Canadá BI v6.1 | Madson da Hora Analyst</div>', unsafe_allow_html=True)
 
 elif auth_status is False:
     st.error("Login/Senha incorretos")
+elif auth_status is None:
+    st.warning("Por favor, insira suas credenciais.")
