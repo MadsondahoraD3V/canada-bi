@@ -5,80 +5,78 @@ import re
 import pandas as pd
 import unicodedata
 from decimal import Decimal
-import plotly.express as px
+import time
 
 # ==========================================
-# 1. CONFIGURAÇÕES VISUAIS E CSS FUTURISTA
+# 1. CONFIGURAÇÕES VISUAIS E CSS
 # ==========================================
-st.set_page_config(page_title="Canadá BI - Executive", layout="wide")
+st.set_page_config(page_title="Canadá BI - Pro", layout="wide")
 
 st.markdown("""
     <style>
     .stApp { background-color: #020617; }
-    
-    /* Painel Flutuante de Soma */
     .floating-sum {
-        position: fixed;
-        top: 60px;
-        right: 20px;
-        background: rgba(16, 185, 129, 0.9);
-        color: white;
-        padding: 15px 25px;
-        border-radius: 12px;
-        z-index: 999;
-        font-weight: 900;
-        font-size: 20px;
-        box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
-        border: 1px solid #ffffff33;
+        position: fixed; top: 70px; right: 30px;
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        color: white; padding: 20px; border-radius: 15px; z-index: 1000;
+        font-weight: 900; font-size: 22px; box-shadow: 0 10px 25px rgba(16,185,129,0.4);
+        text-align: center; border: 1px solid rgba(255,255,255,0.2);
     }
-
-    /* Cards de Categoria com Animação */
     .cat-card {
-        background: rgba(15, 23, 42, 0.6);
-        border: 1px solid rgba(56, 189, 248, 0.2);
-        border-radius: 15px;
-        padding: 20px;
-        text-align: center;
-        transition: all 0.3s ease;
+        background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.3);
+        border-radius: 12px; padding: 15px; text-align: center; margin-top: 10px;
     }
-    .cat-card:hover {
-        transform: translateY(-5px);
-        border-color: #38bdf8;
-        background: rgba(15, 23, 42, 0.9);
+    .footer {
+        position: fixed; left: 0; bottom: 0; width: 100%;
+        background-color: rgba(0,0,0,0.9); color: #475569; text-align: center;
+        padding: 8px; font-size: 11px; border-top: 1px solid #1e293b;
     }
-
-    .cat-title { color: #94a3b8; font-size: 13px; font-weight: 600; text-transform: uppercase; }
-    .cat-value { color: #10b981; font-size: 24px; font-weight: 900; }
-
-    /* Estilo para Checkboxes de Seleção */
-    .stCheckbox { margin-bottom: -15px; }
     </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. FUNÇÕES DE SUPORTE
+# 2. FUNÇÕES CORE (LÓGICA REUTILIZÁVEL)
 # ==========================================
-def remover_acentos(texto):
-    return ''.join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn').upper()
-
 def formatar_moeda(valor):
     return f"R$ {float(valor):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
 def limpar_nome_produto(nome_bruto):
     nome = re.sub(r'\b\d{5,8}\b', '', nome_bruto) 
     nome = re.sub(r'\d{1,2}-[a-zA-Z]{3}(-\d{2,4})?', '', nome) 
-    return nome.replace('.', '').replace('-', '').strip()[:28]
+    return nome.replace('.', '').replace('-', '').strip()[:25]
 
 def palpite_categoria(nome):
-    txt = remover_acentos(nome)
+    txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
     if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY"]): return "Tabacaria"
     if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL"]): return "Bebidas"
     if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE"]): return "Bomboniere"
     if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO"]): return "Remédios"
     return "Mercearia"
 
+def processar_pdf(file):
+    """Lógica central de leitura de cada PDF."""
+    dados = []
+    with pdfplumber.open(file) as pdf:
+        txt_topo = pdf.pages[0].extract_text() or ""
+        match_d = re.search(r'(\d{2}/\d{2}/\d{4})\s*[AÀaà]\s*(\d{2}/\d{2}/\d{4})', txt_topo)
+        periodo = f"{match_d.group(1)} a {match_d.group(2)}" if match_d else "DATA DESCONHECIDA"
+        
+        for page in pdf.pages:
+            linhas = (page.extract_text() or "").split('\n')
+            for linha in linhas:
+                try:
+                    valores = re.findall(r'\d+,\d{2}', linha)
+                    if len(valores) >= 4:
+                        ean_m = re.search(r'\b\d{8,14}\b', linha)
+                        nome_m = re.search(r'(.+?)\s+(?:UN|KG)\s+\d+,\d{2}', linha)
+                        nome_limpo = limpar_nome_produto(nome_m.group(1).replace(ean_m.group() if ean_m else "", "").strip())
+                        val = float(valores[-4].replace(',', '.'))
+                        dados.append({"Nome": nome_limpo, "Cat": palpite_categoria(nome_limpo), "Valor": val, "Periodo": periodo})
+                except: continue
+    return dados, periodo
+
 # ==========================================
-# 3. SEGURANÇA - MÚLTIPLOS USUÁRIOS
+# 3. SEGURANÇA (LOGIN)
 # ==========================================
 credentials = {
     "usernames": {
@@ -90,85 +88,99 @@ credentials = {
 }
 
 authenticator = stauth.Authenticate(credentials, "canada_bi_cookie", "auth_key_2026", expiry_days=30)
-name, authentication_status, username = authenticator.login("Login", "main")
+name, auth_status, username = authenticator.login("Login", "main")
 
-if authentication_status:
-    with st.sidebar:
-        st.markdown(f"### 👤 {name}")
-        authenticator.logout("Sair", "sidebar")
-    
-    st.title("🇨🇦 CANADA BI | Executive Intelligence")
-    uploaded_file = st.file_uploader("Upload PDF", type="pdf", label_visibility="collapsed")
+if auth_status:
+    # --- MENU DE NAVEGAÇÃO ---
+    st.sidebar.title(f"👤 {name}")
+    pagina = st.sidebar.radio("Navegação", ["📊 Painel Individual", "🚀 Upload em Lote"])
+    authenticator.logout("Sair", "sidebar")
 
-    if uploaded_file:
-        dados_agrupados = {}
-        with pdfplumber.open(uploaded_file) as pdf:
-            for page in pdf.pages:
-                linhas = (page.extract_text() or "").split('\n')
-                for linha in linhas:
-                    try:
-                        linha_limpa = linha.replace('|', ' ').strip()
-                        ean_match = re.search(r'\b\d{8,14}\b', linha_limpa)
-                        valores = re.findall(r'\d+,\d{2}', linha_limpa)
-                        if ean_match and len(valores) >= 4:
-                            ean = ean_match.group()
-                            match_n = re.search(r'(.+?)\s+(?:UN|KG)\s+\d+,\d{2}', linha_limpa)
-                            nome_bruto = match_n.group(1).replace(ean, '').strip() if match_n else "PRODUTO"
-                            nome_final = limpar_nome_produto(nome_bruto)
-                            valor_total = Decimal(valores[-4].replace(',', '.'))
-                            cat = palpite_categoria(nome_final)
-                            if ean in dados_agrupados:
-                                dados_agrupados[ean]['Valor'] += valor_total
-                            else:
-                                dados_agrupados[ean] = {"Nome": nome_final, "Cat": cat, "Valor": valor_total}
-                    except: continue
-
-        df = pd.DataFrame(list(dados_agrupados.values()))
-        df['Valor'] = df['Valor'].apply(float)
-
-        # --- LÓGICA DA SOMA FLUTUANTE ---
-        if 'soma_selecionada' not in st.session_state:
-            st.session_state.soma_selecionada = 0.0
-
-        # --- INTERFACE DE CATEGORIAS (KANBAN) ---
-        st.write("### 📂 Selecione as Categorias para somar")
-        cats = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
-        colunas = st.columns(len(cats))
+    # ==========================================
+    # PÁGINA 1: PAINEL INDIVIDUAL
+    # ==========================================
+    if pagina == "📊 Painel Individual":
+        st.title("📊 Análise Individual")
+        file = st.file_uploader("Arraste um PDF para análise detalhada", type="pdf", key="single")
         
-        soma_temp = 0.0
+        if file:
+            dados, per = processar_pdf(file)
+            df = pd.DataFrame(dados)
+            
+            st.info(f"📅 Período: {per}")
+            
+            # Soma Flutuante
+            cats = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
+            cols = st.columns(len(cats))
+            selecionadas = []
+            for i, c in enumerate(cats):
+                with cols[i]:
+                    if st.checkbox(c, value=True, key=f"s_{c}"): selecionadas.append(c)
+                    v = df[df['Cat'] == c]['Valor'].sum()
+                    st.markdown(f'<div class="cat-card"><div class="cat-title">{c}</div><div class="cat-value">{formatar_moeda(v)}</div></div>', unsafe_allow_html=True)
+            
+            soma_f = df[df['Cat'].isin(selecionadas)]['Valor'].sum()
+            st.markdown(f'<div class="floating-sum">SELECIONADO<br>{formatar_moeda(soma_f)}</div>', unsafe_allow_html=True)
+
+    # ==========================================
+    # PÁGINA 2: UPLOAD EM LOTE
+    # ==========================================
+    else:
+        st.title("🚀 Processamento em Lote")
+        st.write("Selecione até 7 arquivos para processamento simultâneo e geração de relatórios.")
         
-        for i, c_nome in enumerate(cats):
-            with colunas[i]:
-                valor_cat = df[df['Cat'] == c_nome]['Valor'].sum()
+        batch_files = st.file_uploader("Upload em Lote", type="pdf", accept_multiple_files=True, key="batch")
+        
+        if batch_files:
+            if len(batch_files) > 7:
+                st.error("⚠️ Máximo de 7 arquivos permitido.")
+            else:
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                log_container = st.container()
                 
-                # Checkbox para controle da soma flutuante
-                selecionado = st.checkbox(f"Somar {c_nome}", value=True, key=f"check_{c_nome}")
-                if selecionado:
-                    soma_temp += valor_cat
+                sucessos = 0
+                erros = 0
+                lista_resultados = []
 
-                st.markdown(f"""
-                    <div class="cat-card">
-                        <div class="cat-title">{c_nome}</div>
-                        <div class="cat-value">{formatar_moeda(valor_cat)}</div>
-                    </div>
-                """, unsafe_allow_html=True)
+                for i, f in enumerate(batch_files):
+                    # Atualiza Barra de Progresso
+                    percentual = (i + 1) / len(batch_files)
+                    progress_bar.progress(percentual)
+                    status_text.text(f"Processando: {f.name}...")
+                    
+                    try:
+                        dados, per = processar_pdf(f)
+                        if not dados: raise Exception("PDF sem dados compatíveis")
+                        
+                        total = sum(d['Valor'] for d in dados)
+                        lista_resultados.append({"arquivo": f.name, "status": "✅ Sucesso", "periodo": per, "total": total})
+                        sucessos += 1
+                    except Exception as e:
+                        lista_resultados.append({"arquivo": f.name, "status": "❌ Erro", "periodo": "---", "total": 0})
+                        erros += 1
+                    
+                    time.sleep(0.5) # Apenas para visualização do progresso
 
-        # Exibição do Valor Flutuante (CSS fixo)
-        st.markdown(f"""
-            <div class="floating-sum">
-                SELECIONADO: {formatar_moeda(soma_temp)}
-            </div>
-        """, unsafe_allow_html=True)
+                # Relatório Final
+                st.divider()
+                st.subheader("📝 Relatório de Processamento")
+                
+                col_s, col_e = st.columns(2)
+                col_s.metric("Sucessos", sucessos)
+                col_e.metric("Falhas", erros, delta_color="inverse")
 
-        # --- GRÁFICOS ---
-        st.divider()
-        c1, c2 = st.columns([1.2, 1])
-        with c1:
-            st.plotly_chart(px.bar(df.nlargest(10, 'Valor'), x="Valor", y="Nome", orientation='h', title="TOP 10", color_discrete_sequence=['#0ea5e9']).update_layout(template="plotly_dark", height=350), use_container_width=True)
-        with c2:
-            st.plotly_chart(px.pie(df.groupby('Cat')['Valor'].sum().reset_index(), values='Valor', names='Cat', hole=0.5, title="DISTRIBUIÇÃO").update_layout(template="plotly_dark", height=350), use_container_width=True)
+                # Tabela de Detalhes
+                resumo_df = pd.DataFrame(lista_resultados)
+                st.table(resumo_df)
+                
+                if erros > 0:
+                    st.warning(f"Atenção: {erros} arquivo(s) apresentaram problemas de leitura.")
+                else:
+                    st.balloons()
+                    st.success("Todos os arquivos foram processados com perfeição!")
 
-    st.markdown('<div class="footer">Dashboard Executive v3.0 | Madson da Hora</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">Canadá BI v6.0 | Dashboard & Batch System</div>', unsafe_allow_html=True)
 
-elif authentication_status is False:
-    st.error("Login ou Senha incorretos.")
+elif auth_status is False:
+    st.error("Login/Senha incorretos")
