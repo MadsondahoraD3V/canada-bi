@@ -126,16 +126,17 @@ st.markdown("""
     /* ASSINATURA EM BADGE PREMIUM */
     .assinatura-master {
         position: fixed; bottom: 15px; left: 15px; background: rgba(2, 6, 23, 0.6); color: #64748b;
-        padding: 6px 12px; border-radius: 30px; font-size: 10px; border: 1px solid rgba(255,255,255,0.05); 
+        padding: 8px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); 
         z-index: 999999; backdrop-filter: blur(10px); pointer-events: none; white-space: nowrap;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3); text-transform: uppercase; letter-spacing: 0.5px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3); letter-spacing: 0.5px; text-align: left;
     }
 
     footer {visibility: hidden;}
     </style>
     
     <div class="assinatura-master">
-        Desenvolvido por <span style="color: #e0e7ff; font-weight: bold;">@madson_da_hora</span>
+        <span style="font-size: 10px; text-transform: uppercase;">Desenvolvido por <span style="color: #e0e7ff; font-weight: bold;">@madson_da_hora</span></span><br>
+        <span style="font-size: 8px; color: #94a3b8; font-weight: normal;">Analista de dados & Programador</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -227,7 +228,8 @@ def palpite_categoria(nome):
         "ABSORVENTE", "INFINITY", "EMBALAGEM", "BALANCA", "BALANÇA", "FERMENTO", "ALIMENTO", 
         "CONDIMENTO", "PIMENTO", "PEQUENO", "MENOS", "MORENO", "VENENO", "FENO", "PLENO", 
         "SERENO", "TERRENO", "CAMPINEIRO", "DEFINITIVO", "AFINIDADE", "SEDAN", "CIDADAO",
-        "CIDADÃO", "GELATINA", "MACRO", "MICRO", "SAL GROSSO", "SALGROSSO"
+        "CIDADÃO", "GELATINA", "MACRO", "MICRO", "SAL GROSSO", "SALGROSSO", "MILHO DE PIPOCA",
+        "CHOCOLATE EM PO", "CHOCOLATE EM PÓ", "COBERTURA"
     ]
     if any(k in txt for k in excecoes_choque): 
         return "Mercearia", False
@@ -359,7 +361,7 @@ def gerar_html_interativo(df, periodo, total_geral, nome_arquivo):
             .cyber-card:hover {{ background: rgba(255,255,255,0.05); border-left-color: var(--accent); transform: translateX(2px); }}
             .card-title {{ font-size: 10px; color: #e2e8f0; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
             .card-value {{ font-size: 11px; font-weight: 700; color: #ffffff; }}
-            .assinatura-html {{ position: fixed; bottom: 15px; left: 15px; background: rgba(2, 6, 23, 0.8); color: #64748b; padding: 6px 12px; border-radius: 20px; font-size: 9px; border: 1px solid rgba(255,255,255,0.05); z-index: 9999; backdrop-filter: blur(12px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); text-transform: uppercase; letter-spacing: 0.5px; }}
+            .assinatura-html {{ position: fixed; bottom: 15px; left: 15px; background: rgba(2, 6, 23, 0.8); color: #64748b; padding: 8px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); z-index: 9999; backdrop-filter: blur(12px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); text-align: left; letter-spacing: 0.5px; }}
             .assinatura-html span {{ color: #e0e7ff; font-weight: bold; }}
         </style>
     </head>
@@ -371,7 +373,10 @@ def gerar_html_interativo(df, periodo, total_geral, nome_arquivo):
             <p style="color:#475569; font-size:8px; margin-top:2px;">Arquivo Origem: {nome_arquivo}</p>
         </div>
         <div class="container-cols">{colunas_html}</div>
-        <div class="assinatura-html">Desenvolvido por <span>@madson_da_hora</span></div>
+        <div class="assinatura-html">
+            <span style="font-size: 10px; text-transform: uppercase;">Desenvolvido por <span>@madson_da_hora</span></span><br>
+            <span style="font-size: 8px; color: #94a3b8; font-weight: normal; text-transform: none;">Analista de dados & Programador</span>
+        </div>
         <script>
             function toggleAccordion(id) {{ document.getElementById(id).classList.toggle("show"); }}
             function recalcular() {{
@@ -403,7 +408,7 @@ if not st.session_state.get("authentication_status"):
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2: st.image("logo.png", use_container_width=True)
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v49", "auth_key_v49", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v50", "auth_key_v50", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
