@@ -18,7 +18,7 @@ st.set_page_config(page_title="Canadá BI - Corporate", layout="wide")
 st.markdown("""
     <style>
     /* =========================================
-       BLINDAGEM ANTI-FORK E AJUSTE DE TELA
+       BLINDAGEM ANTI-FORK E AJUSTE DE ECRÃ
        ========================================= */
     header { visibility: hidden !important; display: none !important; }
     [data-testid="stHeader"] { display: none !important; }
@@ -34,7 +34,7 @@ st.markdown("""
         backdrop-filter: blur(12px) !important;
     }
     
-    /* TIPOGRAFIA FLUIDA RESPONSIVA (Adapta à tela automaticamente) */
+    /* TIPOGRAFIA FLUIDA RESPONSIVA (Adapta-se ao ecrã automaticamente) */
     .stTextInput label p, .stPasswordInput label p, .stSelectbox label p, .stNumberInput label p, .stDateInput label p { 
         color: #e2e8f0 !important; font-weight: 600 !important; 
         font-size: clamp(11px, 1vw, 13px) !important; 
@@ -214,11 +214,11 @@ def limpar_nome_produto(nome_bruto):
 
 def palpite_categoria(nome):
     """
-    Motor treinado com o Dataset Mestre de 1399 produtos + Auditoria.
+    Motor treinado com o Dataset Mestre + Auditorias constantes.
     """
     txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
     
-    # 1. EXCEÇÕES BLINDADAS (Previnem falsos positivos - CENOURA tem "ENO", por isso a exceção!)
+    # 1. EXCEÇÕES BLINDADAS (Previnem falsos positivos)
     if any(k in txt for k in ["BATATA DOCE", "ITALAKINHO", "DOCE DE LEITE", "ERVADOCE", "ERVA DOCE", "MARAGOGI DOCE", "SHAMPOO", "CONDICIONADOR", "CREME SEDA", "KIT SEDA", "CENOURA"]): 
         return "Mercearia", False
         
@@ -229,7 +229,7 @@ def palpite_categoria(nome):
     if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA", "IMPERIO", "BEATS", "SPATEN", "CABARE", "CONHAQUE", "DREHER", "DEVASSA", "CACHACA"]): 
         return "Bebidas Alcoólicas", False
         
-    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA", "ICEKISS", "MENTOS", "CHICLE", "EMBARE", "FREEGELLS", "GOMETS", "BATOM", "SERENATA", "KITKAT", "CHOKREM", "OLHINHO"]): 
+    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA", "ICEKISS", "MENTOS", "CHICLE", "EMBARE", "FREEGELLS", "GOMETS", "BATOM", "SERENATA", "KITKAT", "CHOKREM", "OLHINHO", "PIRULITO", "PESCOCO DE GIRAFA", "DOCINHO"]): 
         return "Bomboniere", False
         
     if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO", "PARACETAMOL", "CIMEGRIPE", "NEOSALDINA", "NIMESULIDA", "NEOLEFRIN"]): 
@@ -254,7 +254,9 @@ def palpite_categoria(nome):
         "VASSOURA", "VELA", "MUCILON", "CREMOGEMA", "CHIMICHURRI", "COMINHO", "OREGANO", "LOURO", "PIMENTA",
         "BISC ", "PANETONE", "TORRADA", "SASSAMI", "FILE", "MOELA", "CORACAO", "BACON", "PRESUNTO", "FIAMBRE",
         "BOLDO", "TEMPERO", "DETERGENTE", "DETERG ", "ACAI", "PIC ", "PIC STER", "PICOLE", "CREMOSIN", "SORV",
-        "INFINITY", "POLPA", "FEIJAO", "DUETO", "TAMPICO", "OSSINHO", "PINCA", "PINÇAS", "COCOROTE", "LARANJA", "ACAFRAO", "DEL VALLE", "ULTRA COLA", "MORTADELA", "ASA ", "TODYNHO", "TODDY", "CAMOMILA", "FRALDA", "FERMENTO", "RAPADURA", "GALINHA"
+        "INFINITY", "POLPA", "FEIJAO", "DUETO", "TAMPICO", "OSSINHO", "PINCA", "PINÇAS", "COCOROTE", "LARANJA", "ACAFRAO", 
+        "DEL VALLE", "ULTRA COLA", "MORTADELA", "ASA ", "TODYNHO", "TODDY", "CAMOMILA", "FRALDA", "FERMENTO", "RAPADURA", "GALINHA",
+        "SEMPRE LIVRE", "CALABRESA", "VINAGRE", "SKINKA", "REMOVEDOR", "ESMALTE", "H2O", "MARACUJA", "ABACATE", "SODA", "COCO", "SUPER SIGMA", "SALG"
     ]
     if any(k in txt for k in mercearia_explicita):
         return "Mercearia", False
@@ -387,7 +389,7 @@ if not st.session_state.get("authentication_status"):
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2: st.image("logo.png", use_container_width=True)
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v43", "auth_key_v43", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v44", "auth_key_v44", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
