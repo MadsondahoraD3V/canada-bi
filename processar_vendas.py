@@ -16,49 +16,45 @@ st.set_page_config(page_title="Canadá BI - Corporate", layout="wide")
 
 st.markdown("""
     <style>
-    /* BLINDAGEM CONTRA MODO CLARO DO NAVEGADOR */
+    /* Fundo Escuro Corporativo */
     .stApp, .stApp > header { background-color: #0f172a !important; }
-    
-    /* Forçar Barra Lateral Escura */
     [data-testid="stSidebar"] { background-color: #0f172a !important; border-right: 1px solid #1e293b !important; }
     
-    /* CORREÇÃO DO LOGIN: Textos dos formulários brancos e legíveis */
-    .stTextInput label p { color: #f8fafc !important; font-weight: 600 !important; }
-    .stPasswordInput label p { color: #f8fafc !important; font-weight: 600 !important; }
+    /* Textos dos formulários legíveis */
+    .stTextInput label p, .stPasswordInput label p { color: #f8fafc !important; font-weight: 600 !important; }
     
-    /* Consertar o Fundo Branco do Uploader no Chrome/Edge */
+    /* Upload limpo */
     [data-testid="stFileUploadDropzone"] { background-color: #1e293b !important; }
-    
-    /* Total Flutuante no Topo (Corporate Blue) */
-    .floating-sum {
-        position: fixed; top: 70px; right: 30px;
-        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
-        color: white; padding: 15px 25px; border-radius: 8px; z-index: 1000;
-        font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
-        text-align: center; border: 1px solid #3b82f6;
-    }
-    
-    /* Menu Lateral Futurista (Blocos) */
-    div[role="radiogroup"] > label > div:first-of-type { display: none; }
-    div[role="radiogroup"] > label {
-        background: #1e293b !important; border: 1px solid #334155 !important; border-radius: 6px;
-        padding: 10px; margin-bottom: 8px; text-align: center; cursor: pointer;
-        transition: all 0.3s ease; color: #cbd5e1 !important; font-weight: bold; width: 100%;
-    }
-    div[role="radiogroup"] > label:hover { 
-        background: #0f172a !important; border-color: #0ea5e9 !important; color: #0ea5e9 !important; transform: translateX(5px);
-    }
-    div[role="radiogroup"] > label[data-baseweb="radio"] > div:last-child { width: 100%; }
-    
-    /* Customizando a área de Upload */
     [data-testid="stFileUploader"] {
         background-color: #1e293b !important; border-radius: 12px; padding: 15px;
         border: 1px dashed #334155 !important;
     }
     [data-testid="stFileUploaderDropzoneInstructions"] { display: none; }
     small { display: none !important; }
+    
+    /* Menu Lateral Futurista */
+    div[role="radiogroup"] > label > div:first-of-type { display: none; }
+    div[role="radiogroup"] > label {
+        background: #1e293b !important; border: 1px solid #334155 !important; border-radius: 6px;
+        padding: 10px; margin-bottom: 8px; text-align: center; cursor: pointer;
+        transition: all 0.3s ease; color: #cbd5e1 !important; font-weight: bold; width: 100%;
+    }
+    div[role="radiogroup"] > label:hover { background: #0f172a !important; border-color: #0ea5e9 !important; color: #0ea5e9 !important; transform: translateX(5px); }
+    div[role="radiogroup"] > label[data-baseweb="radio"] > div:last-child { width: 100%; }
+    
+    /* Customização dos botões das categorias para parecerem links/blocos limpos */
+    .stButton > button {
+        background-color: #1e293b; border: 1px solid #334155; color: #cbd5e1;
+        border-radius: 6px; font-weight: bold; transition: all 0.2s ease;
+    }
+    .stButton > button:hover { border-color: #0ea5e9; color: #0ea5e9; background-color: #0f172a; }
+
     footer {visibility: hidden;}
     </style>
+    
+    <div style="position: fixed; bottom: 15px; left: 20px; background: rgba(15, 23, 42, 0.9); color: #94a3b8; padding: 8px 15px; border-radius: 20px; font-size: 11px; border: 1px solid #334155; z-index: 9999; backdrop-filter: blur(5px);">
+        Desenvolvido por <span style="color: #38bdf8; font-weight: bold;">@madson_da_hora</span> / Analista de dados e Programador
+    </div>
     """, unsafe_allow_html=True)
 
 # ==========================================
@@ -102,6 +98,7 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
     if st.session_state.usuario_anterior != usuario_atual:
         st.session_state.arquivo_carregado = None
+        st.session_state.cat_expandida = None
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
@@ -110,10 +107,8 @@ def garantir_mesa_limpa(usuario_atual):
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     novo_log = pd.DataFrame([{"Data/Hora": agora, "Usuário": usuario, "Arquivo": arquivo, "Período": periodo}])
-    if not os.path.isfile(LOG_FILE):
-        novo_log.to_csv(LOG_FILE, index=False, sep=';', encoding='utf-8-sig')
-    else:
-        novo_log.to_csv(LOG_FILE, mode='a', header=False, index=False, sep=';', encoding='utf-8-sig')
+    if not os.path.isfile(LOG_FILE): novo_log.to_csv(LOG_FILE, index=False, sep=';', encoding='utf-8-sig')
+    else: novo_log.to_csv(LOG_FILE, mode='a', header=False, index=False, sep=';', encoding='utf-8-sig')
 
 def formatar_moeda(valor):
     return f"R$ {float(valor):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
@@ -132,13 +127,7 @@ def palpite_categoria(nome):
     return "Mercearia"
 
 def gerar_html_interativo(df, periodo, total_geral):
-    cores = {
-        "Tabacaria": {"bg": "#334155", "glow": "rgba(51, 65, 85, 0.2)"},
-        "Bebidas": {"bg": "#1e3a8a", "glow": "rgba(30, 58, 138, 0.2)"},
-        "Bomboniere": {"bg": "#0f766e", "glow": "rgba(15, 118, 110, 0.2)"},
-        "Remédios": {"bg": "#9a3412", "glow": "rgba(154, 52, 18, 0.2)"},
-        "Mercearia": {"bg": "#0369a1", "glow": "rgba(3, 105, 161, 0.2)"}
-    }
+    cores = { "Tabacaria": {"bg": "#334155", "glow": "rgba(51, 65, 85, 0.2)"}, "Bebidas": {"bg": "#1e3a8a", "glow": "rgba(30, 58, 138, 0.2)"}, "Bomboniere": {"bg": "#0f766e", "glow": "rgba(15, 118, 110, 0.2)"}, "Remédios": {"bg": "#9a3412", "glow": "rgba(154, 52, 18, 0.2)"}, "Mercearia": {"bg": "#0369a1", "glow": "rgba(3, 105, 161, 0.2)"} }
     colunas_html = ""
     for i, (cat, paleta) in enumerate(cores.items()):
         itens_cat = df[df['Cat'] == cat]
@@ -185,7 +174,7 @@ def gerar_html_interativo(df, periodo, total_geral):
             .card-title {{ font-size: 11px; color: #cbd5e1; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
             .card-value {{ font-size: 12px; font-weight: bold; color: var(--accent); }}
             .assinatura-html {{ position: fixed; bottom: 15px; left: 20px; background: rgba(15, 23, 42, 0.9); color: #94a3b8; padding: 8px 15px; border-radius: 20px; font-size: 11px; border: 1px solid #334155; z-index: 9999; }}
-            .assinatura-html span {{ color: #0ea5e9; font-weight: bold; }}
+            .assinatura-html span {{ color: #38bdf8; font-weight: bold; }}
         </style>
     </head>
     <body>
@@ -237,13 +226,17 @@ credentials = {
     }
 }
 
-authenticator = stauth.Authenticate(credentials, "canada_bi_v15", "auth_key_v15", expiry_days=30)
+authenticator = stauth.Authenticate(credentials, "canada_bi_v16", "auth_key_v16", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
     user_logado = st.session_state['username']
     garantir_mesa_limpa(user_logado)
     config_usuarios = carregar_configuracoes()
+
+    # Controle de Memória para o Menu Lateral de Detalhes
+    if 'cat_expandida' not in st.session_state:
+        st.session_state.cat_expandida = None
 
     st.sidebar.markdown(f"<h3 style='color:#f8fafc; font-size:16px; margin-bottom: 20px;'>Usuário: {st.session_state['name']}</h3>", unsafe_allow_html=True)
     
@@ -261,16 +254,8 @@ if st.session_state.get("authentication_status"):
         st.sidebar.markdown(f"<p style='color:#94a3b8; font-size:12px;'>Validade Trial: <b style='color:#0ea5e9;'>{validade}</b></p>", unsafe_allow_html=True)
 
     authenticator.logout("Encerrar Sessao", "sidebar")
-    
-    # Assinatura segura fixada no menu esquerdo (nunca será coberta)
-    st.sidebar.markdown("""
-        <div style="margin-top: 40px; padding: 15px; border-radius: 8px; background-color: #0f172a; border: 1px solid #1e293b; text-align: center;">
-            <span style="color: #94a3b8; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Desenvolvido por</span><br>
-            <span style="color: #0ea5e9; font-size: 12px; font-weight: bold;">@madson_da_hora</span><br>
-            <span style="color: #64748b; font-size: 10px;">Analista de Dados e Programador</span>
-        </div>
-    """, unsafe_allow_html=True)
 
+    # --- PÁGINA 1: PAINEL INDIVIDUAL COM NOVO LAYOUT 3 COLUNAS ---
     if pagina == "Painel Individual":
         st.markdown("<h2 style='color:white; font-size:22px; margin-bottom: 20px;'>Análise Individual</h2>", unsafe_allow_html=True)
         pode_acessar, msg_erro = verificar_acesso(user_logado, config_usuarios, is_batch=False)
@@ -294,43 +279,78 @@ if st.session_state.get("authentication_status"):
                 df = pd.DataFrame(dados)
                 total_bruto = df['Valor'].sum()
 
-                # Removido botão de baixar PDF
-                c1, c2 = st.columns([1, 4])
-                with c1:
+                col_btn1, col_btn2 = st.columns([1, 4])
+                with col_btn1:
                     if st.button("Remover Relatório"):
                         st.session_state.arquivo_carregado = None
+                        st.session_state.cat_expandida = None
                         st.rerun()
-                with c2:
+                with col_btn2:
                     html_rel = gerar_html_interativo(df, per, total_bruto)
                     st.download_button(label="Salvar Relatorio", data=html_rel, file_name=f"BI_CANADA_{per.replace('/','-')}.html", mime="text/html")
 
-                st.markdown(f"<p style='color:#94a3b8; font-size:13px; margin-top:20px;'>Período Analisado: <b style='color:white;'>{per}</b></p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='color:#94a3b8; font-size:13px; margin-top:20px; border-bottom: 1px solid #1e293b; padding-bottom:10px;'>Período Analisado: <b style='color:white;'>{per}</b></p>", unsafe_allow_html=True)
                 
-                # Novo Design dos Cards Executivos (KPIs)
-                cats = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
-                cols = st.columns(len(cats))
+                # --- O NOVO LAYOUT DE 3 COLUNAS (FILTROS | TOTAL | DETALHES) ---
+                col_filtros, col_total, col_detalhes = st.columns([3, 3, 4], gap="large")
+                
                 selecionadas = []
-                for i, c in enumerate(cats):
-                    with cols[i]:
-                        if st.checkbox(c, value=True, key=f"s_{c}"): selecionadas.append(c)
-                        v = df[df['Cat'] == c]['Valor'].sum()
+                categorias = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
+                
+                # 1. COLUNA DE FILTROS E CATEGORIAS
+                with col_filtros:
+                    st.markdown("<h4 style='color:#94a3b8; font-size:14px; margin-bottom:15px;'>GERENCIAR CATEGORIAS</h4>", unsafe_allow_html=True)
+                    for cat in categorias:
+                        v = df[df['Cat'] == cat]['Valor'].sum()
                         
-                        st.markdown(f"""
-                        <div style="background: linear-gradient(145deg, #1e293b, #0f172a); 
-                                    border: 1px solid #334155; border-left: 4px solid #0ea5e9; 
-                                    border-radius: 8px; padding: 15px; margin-top: 10px;
-                                    box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-                            <div style="color:#94a3b8; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase;">
-                                {c}
+                        c_chk, c_btn, c_val = st.columns([1, 4, 3])
+                        with c_chk:
+                            if st.checkbox("", value=True, key=f"chk_{cat}"):
+                                selecionadas.append(cat)
+                        with c_btn:
+                            if st.button(cat.upper(), key=f"btn_{cat}", use_container_width=True):
+                                st.session_state.cat_expandida = cat
+                        with c_val:
+                            st.markdown(f"<div style='padding-top:7px; color:#38bdf8; font-weight:bold; font-size:14px;'>{formatar_moeda(v)}</div>", unsafe_allow_html=True)
+
+                # 2. COLUNA DO TOTAL CALCULADO
+                with col_total:
+                    st.markdown("<h4 style='color:#94a3b8; font-size:14px; margin-bottom:15px;'>RESUMO FINANCEIRO</h4>", unsafe_allow_html=True)
+                    soma_f = df[df['Cat'].isin(selecionadas)]['Valor'].sum()
+                    st.markdown(f'''
+                    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 30px 20px; border-radius: 12px; text-align: center; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); border: 1px solid #3b82f6;">
+                        <p style="margin:0; color:#cbd5e1; font-size:13px; font-weight:bold; letter-spacing:1px;">CAIXA TOTAL BRUTO</p>
+                        <h1 style="margin:10px 0 0 0; color:white; font-size:32px; font-weight:900;">{formatar_moeda(soma_f)}</h1>
+                    </div>
+                    ''', unsafe_allow_html=True)
+
+                # 3. COLUNA DE DETALHES (MENU LATERAL INTERNO)
+                with col_detalhes:
+                    st.markdown("<h4 style='color:#94a3b8; font-size:14px; margin-bottom:15px;'>DETALHAMENTO DE ITENS</h4>", unsafe_allow_html=True)
+                    if st.session_state.cat_expandida:
+                        cat_atual = st.session_state.cat_expandida
+                        itens = df[df['Cat'] == cat_atual]
+                        
+                        html_itens = f"""
+                        <div style='background:#1e293b; padding:15px; border-radius:8px; border-top:3px solid #0ea5e9; border-left:1px solid #334155; border-right:1px solid #334155; border-bottom:1px solid #334155;'>
+                            <h5 style='color:white; margin-top:0; font-size:16px;'>{cat_atual.upper()}</h5>
+                            <div style='max-height: 350px; overflow-y: auto; padding-right:10px;'>
+                        """
+                        for _, row in itens.iterrows():
+                            html_itens += f"""
+                            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #334155; padding:10px 0;">
+                                <span style="color:#cbd5e1; font-size:12px; max-width:65%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{row['Nome']}</span>
+                                <span style="color:#38bdf8; font-size:13px; font-weight:bold;">R$ {row['Valor']:,.2f}</span>
                             </div>
-                            <div style="color:#f8fafc; font-size:18px; font-weight:900; margin-top:8px;">
-                                {formatar_moeda(v)}
-                            </div>
+                            """
+                        html_itens += "</div></div>"
+                        st.markdown(html_itens, unsafe_allow_html=True)
+                    else:
+                        st.markdown("""
+                        <div style="background:#1e293b; padding:30px; border-radius:8px; text-align:center; border: 1px dashed #334155;">
+                            <p style="color:#94a3b8; font-size:13px; margin:0;">👈 Clique no nome de uma categoria ao lado para inspecionar os produtos vendidos nela.</p>
                         </div>
                         """, unsafe_allow_html=True)
-                
-                soma_f = df[df['Cat'].isin(selecionadas)]['Valor'].sum()
-                st.markdown(f'<div class="floating-sum">TOTAL SELECIONADO<br>{formatar_moeda(soma_f)}</div>', unsafe_allow_html=True)
 
     elif pagina == "Gerar Multiplos Relatorios":
         st.markdown("<h2 style='color:white; font-size:22px;'>Processamento em Lote</h2>", unsafe_allow_html=True)
