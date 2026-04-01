@@ -145,7 +145,6 @@ st.markdown("""
 CONFIG_FILE = "usuarios_config.json"
 LOG_FILE = "log_atividades.csv"
 
-# ATUALIZADO: Bebidas Alcoólicas
 CORES_CATEGORIAS = {
     "Tabacaria": {"bg": "rgba(30, 41, 59, 0.7)", "glow": "rgba(51, 65, 85, 0.4)", "border": "#475569"},
     "Bebidas Alcoólicas": {"bg": "rgba(30, 58, 138, 0.6)", "glow": "rgba(37, 99, 235, 0.3)", "border": "#3b82f6"},
@@ -197,7 +196,7 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE (MOTORES E AUDITORIA ATUALIZADOS)
+# 3. FUNÇÕES CORE (MOTOR TREINADO COM DATASET)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -215,30 +214,28 @@ def limpar_nome_produto(nome_bruto):
 
 def palpite_categoria(nome):
     """
-    Retorna a Categoria e um Boolean (is_fallback).
-    True = O item escapou de todas as regras e foi jogado na Mercearia por segurança.
+    Motor treinado com o Dataset Mestre de 1399 produtos.
     """
     txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
     
-    # 1. EXCEÇÕES BLINDADAS (Itens que têm nome de outras categorias, mas são Mercearia)
-    if any(k in txt for k in ["BATATA DOCE", "ITALAKINHO", "DOCE DE LEITE", "ERVADOCE", "ERVA DOCE"]): 
+    # 1. EXCEÇÕES BLINDADAS (Previnem falsos positivos)
+    if any(k in txt for k in ["BATATA DOCE", "ITALAKINHO", "DOCE DE LEITE", "ERVADOCE", "ERVA DOCE", "MARAGOGI DOCE", "SHAMPOO", "CONDICIONADOR", "CREME SEDA", "KIT SEDA"]): 
         return "Mercearia", False
         
     # 2. REGRAS GERAIS DE 4 CATEGORIAS
-    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG", "GUDANG"]): 
+    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG", "GUDANG", "EIGHT", "VILA RICA", "ISQUEIRO", "BIC ", "FOSFORO", "MAXIMILIAM", "NISE"]): 
         return "Tabacaria", False
         
-    # Somente bebidas alcoólicas reais
-    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA", "IMPERIO"]): 
+    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA", "IMPERIO", "BEATS", "SPATEN", "CABARE", "CONHAQUE", "DREHER"]): 
         return "Bebidas Alcoólicas", False
         
-    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA", "ICEKISS", "MENTOS", "CHICLE", "EMBARE"]): 
+    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA", "ICEKISS", "MENTOS", "CHICLE", "EMBARE", "SORV", "PICOLE", "CREMOSIN", "FREEGELLS", "GOMETS", "BATOM", "SERENATA", "KITKAT", "CHOKREM"]): 
         return "Bomboniere", False
         
-    if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO"]): 
+    if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO", "PARACETAMOL", "CIMEGRIPE", "NEOSALDINA", "NIMESULIDA", "NEOLEFRIN"]): 
         return "Remédios", False
 
-    # 3. MERCEARIA EXPLÍCITA (Itens treinados, incluindo bebidas não alcoólicas e sorvetes)
+    # 3. MERCEARIA EXPLÍCITA (Treinada pelo Dataset de Estoque)
     mercearia_explicita = [
         "RACAO", "PAO", "PAES", "COENTRO", "QUEIJO", "LACTEA", "FEIJOADA", "SABAO", "MARGARINA", "MARG ",
         "MACARRAO", "MAC ", "FARINHA", "PIMENTAO", "LEITE", "OLEO", "CAFE", "OVO", "AMENDOIM", "BATATA",
@@ -250,12 +247,17 @@ def palpite_categoria(nome):
         "ESPONJA", "ESP ", "ACUCAR", "PIPOCA", "ABSORVENTE", "COLORAL", "FIGADO", "DANONE", "PEITO", "WAFER",
         "BOKUS", "DUMEL", "NATVILLE", "TOMATE", "LIMAO", "ROSQUINHA",
         "AGUA SCHIN", "KAPO", "REFRESCO", "AGUA MINERAL", "COCA", "AGUA DE COCO", "REFRIGERANTE", "DORE", "CC ORIG", "GUARANA",
-        "SORV", "PICOLE", "CREMOSIN"
+        "FANTA", "SPRITE", "PEPSI", "ENERGETICO", "MONSTER", "RED BULL", "TANG", "FRISCO", "MID", "SUKITA", "KUAT", "FYS",
+        "ACHOC", "NESCAU", "ARROZ", "AVEIA", "AZEITONA", "BANANA", "CATCHUP", "KETCHUP", "CHARQUE", "DOWNY", "YPÊ", "MINUANO",
+        "ABSOLUTO", "ALICE", "SONHO", "JOHNSONS", "EVEN", "PROTEX", "ALBANY", "SIENE", "COLGATE", "SORRISO", "ORAL B", "SKALA",
+        "PRESTOBARBA", "GILLETTE", "PROBAK", "HERBISSIMO", "COTONETE", "ALGODAO", "GAS ", "CARVAO", "GELO", "PILHA", "RAIOVAC",
+        "VASSOURA", "VELA", "MUCILON", "CREMOGEMA", "CHIMICHURRI", "COMINHO", "OREGANO", "LOURO", "PIMENTA",
+        "BISC ", "PANETONE", "TORRADA", "SASSAMI", "FILE", "MOELA", "CORACAO", "BACON", "PRESUNTO", "FIAMBRE"
     ]
     if any(k in txt for k in mercearia_explicita):
         return "Mercearia", False
         
-    # 4. REDE DE SEGURANÇA (FALLBACK)
+    # 4. REDE DE SEGURANÇA (FALLBACK REAL)
     return "Mercearia", True
 
 def processar_pdf(file):
@@ -384,7 +386,7 @@ if not st.session_state.get("authentication_status"):
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2: st.image("logo.png", use_container_width=True)
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v38", "auth_key_v38", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v40", "auth_key_v40", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
