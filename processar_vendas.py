@@ -8,6 +8,7 @@ from decimal import Decimal
 from datetime import datetime, date
 import os
 import json
+import time
 
 # ==========================================
 # 1. CONFIGURAÇÕES VISUAIS E CSS (CORPORATIVO)
@@ -38,59 +39,59 @@ st.markdown("""
         background: #1e293b !important; border: 1px solid #334155 !important; border-radius: 6px;
         padding: 10px; margin-bottom: 8px; text-align: center; cursor: pointer;
         transition: all 0.3s ease; color: #cbd5e1 !important; font-weight: bold; width: 100%;
+        position: relative; /* Necessário para o Tooltip */
     }
     div[role="radiogroup"] > label:hover { background: #0f172a !important; border-color: #0ea5e9 !important; color: #0ea5e9 !important; transform: translateX(5px); }
     div[role="radiogroup"] > label[data-baseweb="radio"] > div:last-child { width: 100%; }
     
     /* BOTÕES MENORES E DISCRETOS (Remover e Salvar) */
     .stButton > button, .stDownloadButton > button {
-        padding: 2px 10px !important;
-        font-size: 12px !important;
-        min-height: 30px !important;
-        border-radius: 6px !important;
+        padding: 2px 10px !important; font-size: 12px !important; min-height: 30px !important; border-radius: 6px !important;
     }
 
-    /* DESIGN EXECUTIVO PARA OS BOTÕES DE CATEGORIA (Filtros) */
+    /* COMPACTAÇÃO DA COLUNA DE CATEGORIAS (Filtros mais juntos) */
+    div[data-testid="column"]:nth-of-type(1) div[data-testid="stHorizontalBlock"] {
+        gap: 0.1rem !important; align-items: center !important; margin-bottom: -15px !important;
+    }
     .botao-categoria button {
-        background-color: transparent !important;
-        border: 1px solid #334155 !important;
-        color: #cbd5e1 !important;
-        justify-content: flex-start !important;
-        padding: 4px 10px !important;
-        font-weight: normal !important;
-        font-size: 12px !important;
-        box-shadow: none !important;
-        border-radius: 4px !important;
+        background-color: transparent !important; border: 1px solid #334155 !important; color: #cbd5e1 !important;
+        justify-content: flex-start !important; padding: 2px 8px !important; font-weight: normal !important;
+        font-size: 11px !important; box-shadow: none !important; border-radius: 4px !important; min-height: 22px !important;
     }
-    .botao-categoria button:hover {
-        border-color: #0ea5e9 !important;
-        color: #0ea5e9 !important;
-        background-color: rgba(14, 165, 233, 0.1) !important;
-    }
+    .botao-categoria button:hover { border-color: #0ea5e9 !important; color: #0ea5e9 !important; background-color: rgba(14, 165, 233, 0.1) !important; }
 
     /* Scrollbar minimalista para o menu interno */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 
+    /* Assinatura global invencível e à esquerda */
+    .assinatura-master {
+        position: fixed; bottom: 15px; left: 15px; background: rgba(15, 23, 42, 0.95); color: #94a3b8;
+        padding: 8px 15px; border-radius: 20px; font-size: 10px; border: 1px solid #334155; 
+        z-index: 999999; backdrop-filter: blur(5px); pointer-events: none; white-space: nowrap;
+    }
+
     footer {visibility: hidden;}
     </style>
     
-    <div style="position: fixed; bottom: 15px; left: 20px; background: rgba(15, 23, 42, 0.9); color: #94a3b8; padding: 8px 15px; border-radius: 20px; font-size: 11px; border: 1px solid #334155; z-index: 9999; backdrop-filter: blur(5px);">
-        Desenvolvido por <span style="color: #38bdf8; font-weight: bold;">@madson_da_hora</span> / Analista de dados e Programador
+    <div class="assinatura-master">
+        Desenvolvido por <span style="color: #38bdf8; font-weight: bold;">@madson_da_hora</span> / Analista e Programador
     </div>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. SISTEMA DE GERENCIAMENTO (JSON) E SESSÃO
+# 2. SISTEMA DE GERENCIAMENTO DE USUÁRIOS E SENHAS (JSON)
 # ==========================================
 CONFIG_FILE = "usuarios_config.json"
 LOG_FILE = "log_atividades.csv"
 
+# Agora o JSON guarda TUDO, inclusive as senhas!
 DEFAULT_CONFIG = {
-    "joacildo": {"batch_allowed": False, "quota": 10, "trial_end": "2026-12-31"},
-    "danila": {"batch_allowed": False, "quota": 10, "trial_end": "2026-12-31"},
-    "manoel": {"batch_allowed": False, "quota": 10, "trial_end": "2026-12-31"}
+    "madson": {"name": "Madson", "password": "084269", "batch_allowed": True, "quota": 999, "trial_end": "2099-12-31"},
+    "joacildo": {"name": "Joacildo", "password": "canada2026", "batch_allowed": False, "quota": 10, "trial_end": "2026-12-31"},
+    "danila": {"name": "Danila", "password": "canada2026", "batch_allowed": False, "quota": 10, "trial_end": "2026-12-31"},
+    "manoel": {"name": "Manoel", "password": "canada2026", "batch_allowed": False, "quota": 10, "trial_end": "2026-12-31"}
 }
 
 def carregar_configuracoes():
@@ -101,16 +102,6 @@ def carregar_configuracoes():
 
 def salvar_configuracoes(config_data):
     with open(CONFIG_FILE, 'w') as f: json.dump(config_data, f)
-
-def verificar_acesso(username, config_data, is_batch=False):
-    if username == "madson": return True, "" 
-    user_data = config_data.get(username)
-    if not user_data: return False, "Usuário não configurado no sistema."
-    trial_end = datetime.strptime(user_data["trial_end"], "%Y-%m-%d").date()
-    if date.today() > trial_end: return False, "Seu período de acesso expirou. Contate o Administrador."
-    if user_data["quota"] <= 0: return False, "Sua cota de uploads atingiu o limite."
-    if is_batch and not user_data["batch_allowed"]: return False, "Acesso restrito: Geração múltipla não permitida."
-    return True, ""
 
 def consumir_cota(username, config_data):
     if username != "madson" and username in config_data:
@@ -197,14 +188,12 @@ def gerar_html_interativo(df, periodo, total_geral):
             .cyber-card {{ background: var(--bg-card); padding: 10px; border-radius: 4px; border-left: 3px solid var(--accent); display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155; }}
             .card-title {{ font-size: 11px; color: #cbd5e1; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
             .card-value {{ font-size: 12px; font-weight: bold; color: var(--accent); }}
-            .assinatura-html {{ position: fixed; bottom: 15px; left: 20px; background: rgba(15, 23, 42, 0.9); color: #94a3b8; padding: 8px 15px; border-radius: 20px; font-size: 11px; border: 1px solid #334155; z-index: 9999; }}
-            .assinatura-html span {{ color: #38bdf8; font-weight: bold; }}
         </style>
     </head>
     <body>
         <div class="neon-bar"><h3>CAIXA TOTAL SELECIONADO</h3><h1 id="display-total">R$ {total_geral:,.2f}</h1><p style="color:#94a3b8; font-size:11px; margin:0;">Período: {periodo}</p></div>
         <div class="container-cols">{colunas_html}</div>
-        <div class="assinatura-html">Desenvolvido por <span>@madson_da_hora</span> / Analista de dados e Programador</div>
+        <div style="position: fixed; bottom: 15px; left: 15px; background: rgba(15, 23, 42, 0.95); color: #94a3b8; padding: 8px 15px; border-radius: 20px; font-size: 10px; border: 1px solid #334155; z-index: 999999; backdrop-filter: blur(5px);">Desenvolvido por <span style="color: #38bdf8; font-weight: bold;">@madson_da_hora</span> / Analista e Programador</div>
         <script>
             function toggleAccordion(id) {{ document.getElementById(id).classList.toggle("show"); }}
             function recalcular() {{
@@ -239,34 +228,43 @@ def processar_pdf(file):
     return dados, periodo
 
 # ==========================================
-# 4. SEGURANÇA E LOGIN
+# 4. SEGURANÇA E LOGIN DINÂMICO
 # ==========================================
-credentials = {
-    "usernames": {
-        "madson": {"name": "Madson", "password": "084269"},
-        "joacildo": {"name": "Joacildo", "password": "canada2026"},
-        "danila": {"name": "Danila", "password": "canada2026"},
-        "manoel": {"name": "Manoel", "password": "canada2026"}
-    }
-}
+config_usuarios = carregar_configuracoes()
 
-authenticator = stauth.Authenticate(credentials, "canada_bi_v17", "auth_key_v17", expiry_days=30)
+# Construindo as credenciais dinamicamente a partir do JSON (para as senhas poderem ser trocadas)
+credentials_dict = {"usernames": {}}
+for u, data in config_usuarios.items():
+    credentials_dict["usernames"][u] = {"name": data["name"], "password": data["password"]}
+
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v19", "auth_key_v19", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
     user_logado = st.session_state['username']
     garantir_mesa_limpa(user_logado)
-    config_usuarios = carregar_configuracoes()
 
     if 'cat_expandida' not in st.session_state:
         st.session_state.cat_expandida = None
 
     st.sidebar.markdown(f"<h3 style='color:#f8fafc; font-size:16px; margin-bottom: 20px;'>Usuário: {st.session_state['name']}</h3>", unsafe_allow_html=True)
     
-    opcoes_menu = ["Painel Individual", "Gerar Multiplos Relatorios"]
-    if user_logado == 'madson':
-        opcoes_menu.extend(["Historico de Atividades", "Central de Acoes"])
-    
+    # --- EFEITO DE MENU BLOQUEADO PARA NÃO-ADMINS ---
+    if user_logado != 'madson':
+        st.markdown("""
+        <style>
+        /* Etiqueta flutuante quando o usuário passa o mouse nos itens 3 e 4 */
+        div[role="radiogroup"] > label:nth-child(3):hover::after,
+        div[role="radiogroup"] > label:nth-child(4):hover::after {
+            content: "Sem permissão para essa função, requer mudança de plano.";
+            position: absolute; left: 102%; top: 5px; background: #ef4444; color: white;
+            padding: 5px 10px; border-radius: 4px; font-size: 11px; white-space: nowrap; z-index: 99999;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+    # O Menu mostra TUDO para todo mundo
+    opcoes_menu = ["Análise de Relatório", "Gerar Multiplos Relatorios", "Historico de Atividades", "Central de Permissões"]
     pagina = st.sidebar.radio("Navegação", opcoes_menu, label_visibility="collapsed")
     st.sidebar.markdown("---")
     
@@ -279,12 +277,12 @@ if st.session_state.get("authentication_status"):
     authenticator.logout("Encerrar Sessao", "sidebar")
 
     # --- PÁGINA 1: ANÁLISE DE RELATÓRIO ---
-    if pagina == "Painel Individual":
+    if pagina == "Análise de Relatório":
         st.markdown("<h2 style='color:white; font-size:22px; margin-bottom: 5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
-        pode_acessar, msg_erro = verificar_acesso(user_logado, config_usuarios, is_batch=False)
+        trial_end = datetime.strptime(config_usuarios[user_logado]["trial_end"], "%Y-%m-%d").date()
         
-        if not pode_acessar:
-            st.error(msg_erro)
+        if date.today() > trial_end or config_usuarios[user_logado]["quota"] <= 0:
+            st.error("Acesso Expirado ou Sem Cotas. Contate o Administrador.")
         else:
             if 'arquivo_carregado' not in st.session_state: st.session_state.arquivo_carregado = None
 
@@ -302,79 +300,73 @@ if st.session_state.get("authentication_status"):
                 df = pd.DataFrame(dados)
                 total_bruto = df['Valor'].sum()
 
-                # BOTÕES MENORES E EMPILHADOS À ESQUERDA
+                # BOTÕES MENORES E EMPILHADOS À ESQUERDA (Liberam a visão)
                 col_botoes, col_vazia = st.columns([2, 8])
                 with col_botoes:
                     html_rel = gerar_html_interativo(df, per, total_bruto)
-                    st.download_button(label="Salvar Relatório", data=html_rel, file_name=f"BI_CANADA_{per.replace('/','-')}.html", mime="text/html", use_container_width=True)
-                    if st.button("Remover Relatório", use_container_width=True):
+                    st.download_button(label="📥 Salvar Relatório HTML", data=html_rel, file_name=f"BI_CANADA_{per.replace('/','-')}.html", mime="text/html", use_container_width=True)
+                    if st.button("🗑️ Remover Relatório", use_container_width=True):
                         st.session_state.arquivo_carregado = None
                         st.session_state.cat_expandida = None
                         st.rerun()
 
-                st.markdown(f"<p style='color:#94a3b8; font-size:12px; margin-top:15px; border-bottom: 1px solid #1e293b; padding-bottom:10px;'>Período Analisado: <b style='color:white;'>{per}</b></p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='color:#94a3b8; font-size:12px; margin-top:10px; border-bottom: 1px solid #1e293b; padding-bottom:10px;'>Período Analisado: <b style='color:white;'>{per}</b></p>", unsafe_allow_html=True)
                 
-                # --- LAYOUT DE 3 COLUNAS (FILTROS | TOTAL | DETALHES) ---
+                # --- LAYOUT DE 3 COLUNAS ---
                 col_filtros, col_total, col_detalhes = st.columns([3, 3, 4], gap="large")
                 
                 selecionadas = []
                 categorias = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
                 
                 with col_filtros:
-                    st.markdown("<h4 style='color:#94a3b8; font-size:12px; margin-bottom:15px; text-transform:uppercase;'>Categorias</h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='color:#94a3b8; font-size:12px; margin-bottom:10px; text-transform:uppercase;'>Categorias</h4>", unsafe_allow_html=True)
                     for cat in categorias:
                         v = df[df['Cat'] == cat]['Valor'].sum()
                         
                         c_chk, c_btn, c_val = st.columns([1, 5, 3])
                         with c_chk:
-                            if st.checkbox("", value=True, key=f"chk_{cat}"):
-                                selecionadas.append(cat)
+                            if st.checkbox("", value=True, key=f"chk_{cat}"): selecionadas.append(cat)
                         with c_btn:
                             st.markdown('<div class="botao-categoria">', unsafe_allow_html=True)
-                            if st.button(cat.upper(), key=f"btn_{cat}", use_container_width=True):
-                                st.session_state.cat_expandida = cat
+                            if st.button(cat.upper(), key=f"btn_{cat}", use_container_width=True): st.session_state.cat_expandida = cat
                             st.markdown('</div>', unsafe_allow_html=True)
                         with c_val:
-                            st.markdown(f"<div style='padding-top:7px; color:#0ea5e9; font-weight:bold; font-size:13px;'>{formatar_moeda(v)}</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='padding-top:2px; color:#0ea5e9; font-weight:bold; font-size:12px;'>{formatar_moeda(v)}</div>", unsafe_allow_html=True)
 
                 with col_total:
-                    st.markdown("<h4 style='color:#94a3b8; font-size:12px; margin-bottom:15px; text-transform:uppercase;'>Resumo Financeiro</h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='color:#94a3b8; font-size:12px; margin-bottom:10px; text-transform:uppercase;'>Resumo Financeiro</h4>", unsafe_allow_html=True)
                     soma_f = df[df['Cat'].isin(selecionadas)]['Valor'].sum()
                     st.markdown(f'''
-                    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 30px 20px; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2); border: 1px solid #3b82f6;">
-                        <p style="margin:0; color:#cbd5e1; font-size:12px; font-weight:bold; letter-spacing:1px;">CAIXA TOTAL BRUTO</p>
-                        <h1 style="margin:10px 0 0 0; color:white; font-size:28px; font-weight:900;">{formatar_moeda(soma_f)}</h1>
+                    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 20px; border-radius: 8px; text-align: center; border: 1px solid #3b82f6;">
+                        <p style="margin:0; color:#cbd5e1; font-size:11px; font-weight:bold; letter-spacing:1px;">CAIXA TOTAL BRUTO</p>
+                        <h1 style="margin:5px 0 0 0; color:white; font-size:24px; font-weight:900;">{formatar_moeda(soma_f)}</h1>
                     </div>
                     ''', unsafe_allow_html=True)
 
                 with col_detalhes:
-                    st.markdown("<h4 style='color:#94a3b8; font-size:12px; margin-bottom:15px; text-transform:uppercase;'>Detalhamento de Itens</h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='color:#94a3b8; font-size:12px; margin-bottom:10px; text-transform:uppercase;'>Detalhamento (Miniatura)</h4>", unsafe_allow_html=True)
                     if st.session_state.cat_expandida:
                         cat_atual = st.session_state.cat_expandida
                         itens = df[df['Cat'] == cat_atual]
                         
-                        # Correção do Bug do HTML (Sem espaços em branco no início da linha para evitar formato de código do Markdown)
-                        html_itens = f"<div style='background:#1e293b; padding:15px; border-radius:8px; border-top:3px solid #0ea5e9; border-left:1px solid #334155; border-right:1px solid #334155; border-bottom:1px solid #334155; box-shadow: 0 4px 10px rgba(0,0,0,0.2);'>"
-                        html_itens += f"<h5 style='color:white; margin:0 0 10px 0; font-size:13px; letter-spacing:1px;'>{cat_atual.upper()}</h5>"
-                        html_itens += "<div style='max-height: 320px; overflow-y: auto; padding-right:5px;'>"
-                        
+                        # Lista de Itens bem pequena para economizar tela
+                        html_itens = f"<div style='background:#1e293b; padding:10px; border-radius:6px; border-left:2px solid #0ea5e9; border-top:1px solid #334155; border-right:1px solid #334155; border-bottom:1px solid #334155;'>"
+                        html_itens += f"<h5 style='color:white; margin:0 0 8px 0; font-size:11px; letter-spacing:1px;'>{cat_atual.upper()}</h5>"
+                        html_itens += "<div style='max-height: 250px; overflow-y: auto; padding-right:5px;'>"
                         for _, row in itens.iterrows():
-                            html_itens += f"<div style='display:flex; justify-content:space-between; border-bottom:1px solid #334155; padding:8px 0;'><span style='color:#cbd5e1; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70%;'>{row['Nome']}</span><span style='color:#0ea5e9; font-size:12px; font-weight:bold;'>R$ {row['Valor']:,.2f}</span></div>"
-                        
+                            html_itens += f"<div style='display:flex; justify-content:space-between; border-bottom:1px solid #334155; padding:4px 0;'><span style='color:#cbd5e1; font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70%;'>{row['Nome']}</span><span style='color:#0ea5e9; font-size:10px; font-weight:bold;'>R$ {row['Valor']:,.2f}</span></div>"
                         html_itens += "</div></div>"
                         st.markdown(html_itens, unsafe_allow_html=True)
                     else:
-                        st.markdown("""
-                        <div style="background:#1e293b; padding:30px; border-radius:8px; text-align:center; border: 1px dashed #334155;">
-                            <p style="color:#94a3b8; font-size:12px; margin:0;">👈 Selecione uma categoria ao lado para inspecionar os itens.</p>
-                        </div>
-                        """, unsafe_allow_html=True)
+                        st.markdown("""<div style="background:#1e293b; padding:15px; border-radius:6px; text-align:center; border: 1px dashed #334155;"><p style="color:#94a3b8; font-size:11px; margin:0;">👈 Clique na categoria para inspecionar</p></div>""", unsafe_allow_html=True)
 
+    # --- PÁGINAS PROTEGIDAS PELO PAYWALL (Múltiplos, Histórico, Permissões) ---
     elif pagina == "Gerar Multiplos Relatorios":
-        st.markdown("<h2 style='color:white; font-size:22px;'>Processamento em Lote</h2>", unsafe_allow_html=True)
-        pode_acessar, msg_erro = verificar_acesso(user_logado, config_usuarios, is_batch=True)
-        if not pode_acessar: st.error(msg_erro)
+        if not config_usuarios[user_logado]["batch_allowed"] and user_logado != "madson":
+            st.toast("🔒 Sem permissão para essa função, requer mudança de plano.")
+            st.warning("Acesso Restrito: Sua assinatura não contempla múltiplas gerações.")
         else:
+            st.markdown("<h2 style='color:white; font-size:22px;'>Processamento em Lote</h2>", unsafe_allow_html=True)
             batch_files = st.file_uploader("Selecionar Novos Relatórios", type="pdf", accept_multiple_files=True)
             if batch_files:
                 for f in batch_files[:7]:
@@ -383,30 +375,45 @@ if st.session_state.get("authentication_status"):
                         registrar_log(st.session_state['name'], f.name, per)
                         consumir_cota(user_logado, config_usuarios)
                     except: continue
-                st.success("Arquivos processados e registrados.")
+                st.success("Arquivos processados.")
 
     elif pagina == "Historico de Atividades":
-        st.markdown("<h2 style='color:white; font-size:22px;'>Histórico de Registros</h2>", unsafe_allow_html=True)
-        if os.path.exists(LOG_FILE): st.dataframe(pd.read_csv(LOG_FILE, sep=';').sort_index(ascending=False), use_container_width=True)
+        if user_logado != "madson":
+            st.toast("🔒 Sem permissão para essa função, requer mudança de plano.")
+            st.warning("Acesso Restrito ao Administrador.")
+        else:
+            st.markdown("<h2 style='color:white; font-size:22px;'>Histórico de Registros</h2>", unsafe_allow_html=True)
+            if os.path.exists(LOG_FILE): st.dataframe(pd.read_csv(LOG_FILE, sep=';').sort_index(ascending=False), use_container_width=True)
 
-    elif pagina == "Central de Acoes":
-        st.markdown("<h2 style='color:white; font-size:22px;'>Central de Gerenciamento</h2>", unsafe_allow_html=True)
-        usuarios_comuns = [u for u in config_usuarios.keys() if u != "madson"]
-        usr_selecionado = st.selectbox("Selecione o Usuário", usuarios_comuns)
-        if usr_selecionado:
-            dados_usr = config_usuarios[usr_selecionado]
-            with st.form("form_admin"):
-                st.markdown(f"<h4 style='color:#38bdf8;'>Permissões: {usr_selecionado.capitalize()}</h4>", unsafe_allow_html=True)
-                novo_batch = st.checkbox("Habilitar 'Gerar Múltiplos Relatórios'", value=dados_usr["batch_allowed"])
-                nova_cota = st.number_input("Cota Restante de Uploads", min_value=0, value=dados_usr["quota"], step=1)
-                data_atual = datetime.strptime(dados_usr["trial_end"], "%Y-%m-%d").date()
-                nova_data = st.date_input("Data de Expiração (Trial)", value=data_atual)
-                if st.form_submit_button("Salvar Modificações"):
-                    config_usuarios[usr_selecionado]["batch_allowed"] = novo_batch
-                    config_usuarios[usr_selecionado]["quota"] = nova_cota
-                    config_usuarios[usr_selecionado]["trial_end"] = nova_data.strftime("%Y-%m-%d")
-                    salvar_configuracoes(config_usuarios)
-                    st.success("Configurações atualizadas com sucesso.")
+    elif pagina == "Central de Permissões":
+        if user_logado != "madson":
+            st.toast("🔒 Sem permissão para essa função, requer mudança de plano.")
+            st.warning("Acesso Restrito ao Administrador.")
+        else:
+            st.markdown("<h2 style='color:white; font-size:22px;'>Central de Permissões</h2>", unsafe_allow_html=True)
+            usuarios_comuns = [u for u in config_usuarios.keys() if u != "madson"]
+            usr_selecionado = st.selectbox("Selecione o Usuário para Editar", usuarios_comuns)
+            
+            if usr_selecionado:
+                dados_usr = config_usuarios[usr_selecionado]
+                with st.form("form_admin"):
+                    st.markdown(f"<h4 style='color:#38bdf8; font-size:16px;'>Editando: {usr_selecionado.capitalize()}</h4>", unsafe_allow_html=True)
+                    
+                    # NOVIDADE: Campo para atualizar a senha
+                    nova_senha = st.text_input("Senha de Acesso do Usuário", value=dados_usr["password"])
+                    
+                    novo_batch = st.checkbox("Habilitar 'Gerar Múltiplos Relatórios'", value=dados_usr["batch_allowed"])
+                    nova_cota = st.number_input("Cota Restante de Uploads", min_value=0, value=dados_usr["quota"], step=1)
+                    data_atual = datetime.strptime(dados_usr["trial_end"], "%Y-%m-%d").date()
+                    nova_data = st.date_input("Data de Expiração (Trial)", value=data_atual)
+                    
+                    if st.form_submit_button("Salvar Modificações"):
+                        config_usuarios[usr_selecionado]["password"] = nova_senha
+                        config_usuarios[usr_selecionado]["batch_allowed"] = novo_batch
+                        config_usuarios[usr_selecionado]["quota"] = nova_cota
+                        config_usuarios[usr_selecionado]["trial_end"] = nova_data.strftime("%Y-%m-%d")
+                        salvar_configuracoes(config_usuarios)
+                        st.success("Permissões e Senha atualizadas! A nova senha já está valendo.")
 
 elif st.session_state.get("authentication_status") is False:
     st.error("Credenciais inválidas.")
