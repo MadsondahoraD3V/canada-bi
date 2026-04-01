@@ -34,7 +34,7 @@ st.markdown("""
         backdrop-filter: blur(12px) !important;
     }
     
-    /* TIPOGRAFIA FLUIDA RESPONSIVA (Adapta à tela automaticamente) */
+    /* TIPOGRAFIA FLUIDA RESPONSIVA */
     .stTextInput label p, .stPasswordInput label p, .stSelectbox label p, .stNumberInput label p, .stDateInput label p { 
         color: #e2e8f0 !important; font-weight: 600 !important; 
         font-size: clamp(11px, 1vw, 13px) !important; 
@@ -105,7 +105,7 @@ st.markdown("""
         white-space: nowrap !important; 
         font-size: clamp(10px, 1.1vw, 13px) !important;
         overflow: hidden !important;
-        text-overflow: ellipsis !important; /* Coloca '...' se a tela for hiper pequena */
+        text-overflow: ellipsis !important;
         text-align: left !important;
     }
 
@@ -117,6 +117,11 @@ st.markdown("""
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: rgba(56,189,248,0.5); }
+
+    /* ESTILOS DO EXPANDER DE AUDITORIA */
+    [data-testid="stExpander"] { background-color: rgba(15, 23, 42, 0.3) !important; border: 1px solid rgba(255,255,255,0.05) !important; border-radius: 8px !important; }
+    [data-testid="stExpander"] p { color: #94a3b8 !important; font-weight: 600 !important; }
+    [data-testid="stExpander"] svg { color: #38bdf8 !important; }
 
     /* ASSINATURA EM BADGE PREMIUM */
     .assinatura-master {
@@ -191,7 +196,7 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE (CONGELADAS E BLINDADAS)
+# 3. FUNÇÕES CORE (COM ETIQUETA DE AUDITORIA)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -208,13 +213,28 @@ def limpar_nome_produto(nome_bruto):
     return nome.replace('.', '').replace('-', '').strip()[:22]
 
 def palpite_categoria(nome):
+    """
+    Retorna a Categoria e um Boolean (is_fallback).
+    True significa que ele não bateu em nenhuma regra e caiu na rede de segurança.
+    """
     txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
-    if any(k in txt for k in ["BATATA DOCE", "ITALAKINHO", "DOCE DE LEITE", "ERVADOCE", "ERVA DOCE"]): return "Mercearia"
-    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG", "GUDANG"]): return "Tabacaria"
-    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA"]): return "Bebidas"
-    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA"]): return "Bomboniere"
-    if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO"]): return "Remédios"
-    return "Mercearia"
+    
+    # EXCEÇÕES BLINDADAS
+    if any(k in txt for k in ["BATATA DOCE", "ITALAKINHO", "DOCE DE LEITE", "ERVADOCE", "ERVA DOCE"]): 
+        return "Mercearia", False
+        
+    # AS 5 CATEGORIAS OFICIAIS
+    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG", "GUDANG"]): 
+        return "Tabacaria", False
+    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA"]): 
+        return "Bebidas", False
+    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA"]): 
+        return "Bomboniere", False
+    if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO"]): 
+        return "Remédios", False
+        
+    # REDE DE SEGURANÇA (FALLBACK)
+    return "Mercearia", True
 
 def processar_pdf(file):
     dados = []
@@ -237,9 +257,13 @@ def processar_pdf(file):
                         partes = re.split(r'\s*\b\d+,\d{2}\b', str_sem_ean)
                         n_bruto = partes[0].strip()
                         n_bruto = re.sub(r'\s+(UN|KG|CX|PCT|L|ML|G|KIT|M|DZ|BD|FD)\b$', '', n_bruto, flags=re.IGNORECASE).strip()
+                        
                         nome_limpo = limpar_nome_produto(n_bruto)
                         val = float(valores[-4].replace(',', '.'))
-                        dados.append({"Nome": nome_limpo, "Cat": palpite_categoria(nome_limpo), "Valor": val})
+                        
+                        cat, is_fallback = palpite_categoria(nome_limpo)
+                        
+                        dados.append({"Nome": nome_limpo, "Cat": cat, "Valor": val, "Fallback": is_fallback})
                 except Exception as e: continue
     return dados, periodo
 
@@ -338,7 +362,7 @@ if not st.session_state.get("authentication_status"):
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2: st.image("logo.png", use_container_width=True)
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v34", "auth_key_v34", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v36", "auth_key_v36", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
@@ -432,7 +456,6 @@ if st.session_state.get("authentication_status"):
 
                 st.markdown("<hr style='border-color:rgba(255,255,255,0.05); margin-top:10px; margin-bottom:15px;'>", unsafe_allow_html=True)
                 
-                # REBALANCEAMENTO FINO (Flex Layout Real)
                 col_filtros, col_total, col_detalhes = st.columns([3.5, 3.5, 5], gap="large")
                 selecionadas = []
                 categorias_pdf = sorted(df['Cat'].unique())
@@ -488,6 +511,17 @@ if st.session_state.get("authentication_status"):
                         st.markdown(html_itens, unsafe_allow_html=True)
                     else:
                         st.markdown("""<div style="background:rgba(15, 23, 42, 0.4); padding:20px; border-radius:12px; text-align:center; border: 1px dashed rgba(255,255,255,0.1);"><p style="color:#64748b; font-size:11px; font-weight:500; margin:0;">Selecione uma categoria ao lado para inspecionar os itens.</p></div>""", unsafe_allow_html=True)
+
+                st.markdown("<hr style='border-color:rgba(255,255,255,0.05); margin-top:15px; margin-bottom:20px;'>", unsafe_allow_html=True)
+                
+                # --- PAINEL DE AUDITORIA DE CATEGORIZAÇÃO (Invisível no HTML) ---
+                with st.expander("🔎 Auditoria do Motor (Itens sem Regra Específica)"):
+                    df_fallback = df[df['Fallback'] == True]
+                    if not df_fallback.empty:
+                        st.markdown("<p style='color:#94a3b8; font-size:11px;'>Os itens abaixo foram alocados em <b>Mercearia</b> por não acionarem nenhuma palavra-chave das outras categorias. Verifique se algum necessita de uma nova regra.</p>", unsafe_allow_html=True)
+                        st.dataframe(df_fallback[['Nome', 'Valor']], use_container_width=True, hide_index=True)
+                    else:
+                        st.success("Todos os itens do relatório foram categorizados por regras explícitas!")
 
     elif pagina == "Gerar Multiplos Relatorios":
         if not config_usuarios[user_logado]["batch_allowed"] and user_logado != "madson":
