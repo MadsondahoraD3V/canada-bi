@@ -196,7 +196,7 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE (MOTOR TREINADO)
+# 3. FUNÇÕES CORE (MOTOR TREINADO E AFIADO)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -214,7 +214,7 @@ def limpar_nome_produto(nome_bruto):
 
 def palpite_categoria(nome):
     """
-    Motor treinado com o Dataset Mestre de 1399 produtos + Ajustes Manuais.
+    Motor treinado com o Dataset Mestre de 1399 produtos + Auditoria.
     """
     txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
     
@@ -226,7 +226,7 @@ def palpite_categoria(nome):
     if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG", "GUDANG", "EIGHT", "VILA RICA", "ISQUEIRO", "BIC ", "FOSFORO", "MAXIMILIAM", "NISE"]): 
         return "Tabacaria", False
         
-    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA", "IMPERIO", "BEATS", "SPATEN", "CABARE", "CONHAQUE", "DREHER"]): 
+    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA", "IMPERIO", "BEATS", "SPATEN", "CABARE", "CONHAQUE", "DREHER", "DEVASSA"]): 
         return "Bebidas Alcoólicas", False
         
     if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA", "ICEKISS", "MENTOS", "CHICLE", "EMBARE", "FREEGELLS", "GOMETS", "BATOM", "SERENATA", "KITKAT", "CHOKREM", "OLHINHO"]): 
@@ -235,7 +235,7 @@ def palpite_categoria(nome):
     if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO", "PARACETAMOL", "CIMEGRIPE", "NEOSALDINA", "NIMESULIDA", "NEOLEFRIN"]): 
         return "Remédios", False
 
-    # 3. MERCEARIA EXPLÍCITA (Treinada pelo Dataset de Estoque + Suas Exigências)
+    # 3. MERCEARIA EXPLÍCITA (Treinada pelo Dataset de Estoque + Ajustes Finos de Auditoria)
     mercearia_explicita = [
         "RACAO", "PAO", "PAES", "COENTRO", "QUEIJO", "LACTEA", "FEIJOADA", "SABAO", "MARGARINA", "MARG ",
         "MACARRAO", "MAC ", "FARINHA", "PIMENTAO", "LEITE", "OLEO", "CAFE", "OVO", "AMENDOIM", "BATATA", "BATATINHA",
@@ -253,7 +253,8 @@ def palpite_categoria(nome):
         "PRESTOBARBA", "GILLETTE", "PROBAK", "HERBISSIMO", "COTONETE", "ALGODAO", "GAS ", "CARVAO", "GELO", "PILHA", "RAIOVAC",
         "VASSOURA", "VELA", "MUCILON", "CREMOGEMA", "CHIMICHURRI", "COMINHO", "OREGANO", "LOURO", "PIMENTA",
         "BISC ", "PANETONE", "TORRADA", "SASSAMI", "FILE", "MOELA", "CORACAO", "BACON", "PRESUNTO", "FIAMBRE",
-        "BOLDO", "TEMPERO", "DETERGENTE", "DETERG ", "ACAI", "PIC ", "PIC STER", "PICOLE", "CREMOSIN", "SORV"
+        "BOLDO", "TEMPERO", "DETERGENTE", "DETERG ", "ACAI", "PIC ", "PIC STER", "PICOLE", "CREMOSIN", "SORV",
+        "INFINITY", "POLPA", "FEIJAO", "DUETO", "TAMPICO", "OSSINHO", "PINCA", "PINÇAS", "COCOROTE", "LARANJA", "ACAFRAO", "DEL VALLE", "ULTRA COLA", "MORTADELA", "ASA "
     ]
     if any(k in txt for k in mercearia_explicita):
         return "Mercearia", False
@@ -386,7 +387,7 @@ if not st.session_state.get("authentication_status"):
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2: st.image("logo.png", use_container_width=True)
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v41", "auth_key_v41", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v42", "auth_key_v42", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
@@ -542,10 +543,10 @@ if st.session_state.get("authentication_status"):
                 with st.expander("🔎 Auditoria do Motor (Itens sem Regra Específica)"):
                     df_fallback = df[df['Fallback'] == True]
                     if not df_fallback.empty:
-                        st.markdown("<p style='color:#94a3b8; font-size:11px;'>Os itens abaixo foram alocados em <b>Mercearia</b> por não acionarem nenhuma palavra-chave. Verifique se algum necessita de uma nova regra.</p>", unsafe_allow_html=True)
+                        st.markdown("<p style='color:#94a3b8; font-size:11px;'>Os itens abaixo foram alocados em <b>Mercearia</b> por não acionarem nenhuma palavra-chave oficial. Use essa lista para descobrir se o sistema precisa de novas regras no futuro.</p>", unsafe_allow_html=True)
                         st.dataframe(df_fallback[['Nome', 'Valor']], use_container_width=True, hide_index=True)
                     else:
-                        st.success("Perfeito! Todos os itens deste relatório foram reconhecidos e categorizados com sucesso pelas regras oficiais.")
+                        st.success("Excelente! O motor reconheceu 100% dos itens lidos através das regras oficiais de categorização.")
 
     elif pagina == "Gerar Multiplos Relatorios":
         if not config_usuarios[user_logado]["batch_allowed"] and user_logado != "madson":
