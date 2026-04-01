@@ -19,7 +19,6 @@ st.markdown("""
     <style>
     /* =========================================
        BLINDAGEM ANTI-FORK (OCULTA O TOPO)
-       Isso remove o botão do GitHub, o Menu e o Deploy
        ========================================= */
     header { visibility: hidden !important; display: none !important; }
     [data-testid="stHeader"] { display: none !important; }
@@ -86,7 +85,7 @@ st.markdown("""
         transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.2);
     }
 
-    /* COMPACTAÇÃO EXTREMA DA COLUNA DE CATEGORIAS (QUASE COLADAS) */
+    /* COMPACTAÇÃO EXTREMA DA COLUNA DE CATEGORIAS */
     div[data-testid="column"]:nth-of-type(1) div[data-testid="stHorizontalBlock"] {
         gap: 0rem !important; align-items: center !important; margin-bottom: -18px !important;
     }
@@ -109,7 +108,7 @@ st.markdown("""
     ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: rgba(56,189,248,0.5); }
 
-    /* ASSINATURA EM BADGE PREMIUM (INTOCÁVEL) */
+    /* ASSINATURA EM BADGE PREMIUM */
     .assinatura-master {
         position: fixed; bottom: 20px; left: 20px; background: rgba(2, 6, 23, 0.6); color: #64748b;
         padding: 8px 16px; border-radius: 30px; font-size: 10px; border: 1px solid rgba(255,255,255,0.05); 
@@ -182,7 +181,7 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE (CONGELADAS - INTOCÁVEIS)
+# 3. FUNÇÕES CORE (INTOCÁVEIS)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -242,9 +241,6 @@ def processar_pdf(file):
                 except Exception as e: continue
     return dados, periodo
 
-# ==========================================
-# 5. NOVO HTML EXPORTADO (COM NOME DO ARQUIVO)
-# ==========================================
 def gerar_html_interativo(df, periodo, total_geral, nome_arquivo):
     colunas_html = ""
     categorias_presentes = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
@@ -328,7 +324,15 @@ credentials_dict = {"usernames": {}}
 for u, data in config_usuarios.items():
     credentials_dict["usernames"][u] = {"name": data["name"], "password": data["password"]}
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v26", "auth_key_v26", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v28", "auth_key_v28", expiry_days=30)
+
+# --- LOGÓTIPO NO ECRÃ DE LOGIN ---
+if not st.session_state.get("authentication_status"):
+    if os.path.exists("logo.png"):
+        col1, col2, col3 = st.columns([1.5, 1, 1.5])
+        with col2:
+            st.image("logo.png", use_container_width=True)
+
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
@@ -338,9 +342,13 @@ if st.session_state.get("authentication_status"):
     if 'cat_expandida' not in st.session_state:
         st.session_state.cat_expandida = None
 
+    # --- LOGÓTIPO NO MENU LATERAL ---
+    if os.path.exists("logo.png"):
+        st.sidebar.image("logo.png", use_container_width=True)
+        st.sidebar.markdown("<br>", unsafe_allow_html=True)
+
     st.sidebar.markdown(f"<h3 style='color:#ffffff; font-size:18px; font-weight:700; margin-bottom: 25px;'>Olá, {st.session_state['name']}</h3>", unsafe_allow_html=True)
     
-    # EFEITO ESMAECIDO E TOOLTIP PARA USUÁRIOS COMUNS
     css_bloqueio = ""
     if user_logado != 'madson':
         css_bloqueio += """
@@ -381,7 +389,6 @@ if st.session_state.get("authentication_status"):
 
     # --- PÁGINA 1: ANÁLISE DE RELATÓRIO ---
     if pagina == "Análise de Relatório":
-        
         trial_end = datetime.strptime(config_usuarios[user_logado]["trial_end"], "%Y-%m-%d").date()
         if date.today() > trial_end or (config_usuarios[user_logado]["quota"] <= 0 and user_logado != "madson"):
             st.error("Acesso Expirado ou Sem Cotas. Contate o Administrador.")
@@ -564,6 +571,6 @@ if st.session_state.get("authentication_status"):
                 st.markdown("</div>", unsafe_allow_html=True)
 
 elif st.session_state.get("authentication_status") is False:
-    st.error("Credenciais inválidas. Verifique seu login e senha.")
+    st.error("Credenciais inválidas. Verifique o seu login e senha.")
 elif st.session_state.get("authentication_status") is None:
-    st.info("Plataforma Restrita. Insira suas credenciais para prosseguir.")
+    st.info("Plataforma Restrita. Insira as tuas credenciais para prosseguir.")
