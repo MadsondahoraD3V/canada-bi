@@ -12,10 +12,8 @@ import json
 # ==========================================
 # 1. CONFIGURAÇÕES VISUAIS E CSS (CORPORATIVO)
 # ==========================================
-# Configuração inicial da página para ocupar toda a tela
 st.set_page_config(page_title="Canadá BI - Corporate", layout="wide")
 
-# Estilos CSS injetados para forçar o layout corporativo escuro
 st.markdown("""
     <style>
     .stApp, .stApp > header { background-color: #0f172a !important; }
@@ -79,7 +77,15 @@ st.markdown("""
 CONFIG_FILE = "usuarios_config.json"
 LOG_FILE = "log_atividades.csv"
 
-# Molde padrão de usuários
+# CORES FIXAS PARA AS 5 CATEGORIAS OFICIAIS
+CORES_CATEGORIAS = {
+    "Tabacaria": {"bg": "#334155", "glow": "rgba(51, 65, 85, 0.2)"},
+    "Bebidas": {"bg": "#1e3a8a", "glow": "rgba(30, 58, 138, 0.2)"},
+    "Bomboniere": {"bg": "#0f766e", "glow": "rgba(15, 118, 110, 0.2)"},
+    "Remédios": {"bg": "#9a3412", "glow": "rgba(154, 52, 18, 0.2)"},
+    "Mercearia": {"bg": "#0369a1", "glow": "rgba(3, 105, 161, 0.2)"}
+}
+
 DEFAULT_CONFIG = {
     "madson": {"name": "Madson", "password": "084269", "batch_allowed": True, "quota": 999, "trial_end": "2099-12-31"},
     "joacildo": {"name": "Joacildo", "password": "canada2026", "batch_allowed": False, "quota": 10, "trial_end": "2026-12-31"},
@@ -88,19 +94,14 @@ DEFAULT_CONFIG = {
 }
 
 def salvar_configuracoes(config_data):
-    """Salva o dicionário de usuários no arquivo JSON de forma segura."""
-    with open(CONFIG_FILE, 'w') as f: 
-        json.dump(config_data, f)
+    with open(CONFIG_FILE, 'w') as f: json.dump(config_data, f)
 
 def carregar_configuracoes():
-    """Carrega o JSON e, se faltarem dados (como senha de atualizações anteriores), injeta os valores padrão."""
     if not os.path.exists(CONFIG_FILE):
         salvar_configuracoes(DEFAULT_CONFIG)
         return DEFAULT_CONFIG
-    
     with open(CONFIG_FILE, 'r') as f:
         dados_salvos = json.load(f)
-        
     precisa_atualizar = False
     for usuario, config_padrao in DEFAULT_CONFIG.items():
         if usuario not in dados_salvos:
@@ -111,20 +112,15 @@ def carregar_configuracoes():
                 if chave not in dados_salvos[usuario]:
                     dados_salvos[usuario][chave] = valor
                     precisa_atualizar = True
-                    
-    if precisa_atualizar:
-        salvar_configuracoes(dados_salvos)
-        
+    if precisa_atualizar: salvar_configuracoes(dados_salvos)
     return dados_salvos
 
 def consumir_cota(username, config_data):
-    """Deduz 1 da cota de uploads do usuário não-administrador."""
     if username != "madson" and username in config_data:
         config_data[username]["quota"] -= 1
         salvar_configuracoes(config_data)
 
 def garantir_mesa_limpa(usuario_atual):
-    """Evita o vazamento de memória da sessão apagando arquivos caso um login diferente seja efetuado."""
     if "usuario_anterior" not in st.session_state:
         st.session_state.usuario_anterior = usuario_atual
     if st.session_state.usuario_anterior != usuario_atual:
@@ -133,39 +129,47 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE (INCLUINDO PROCESSAR_PDF)
+# 3. FUNÇÕES CORE (NOVA CLASSIFICAÇÃO E LEITURA 100% SEGURA)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
-    """Salva a ação gerada em um arquivo de histórico CSV."""
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     novo_log = pd.DataFrame([{"Data/Hora": agora, "Usuário": usuario, "Arquivo": arquivo, "Período": periodo}])
-    if not os.path.isfile(LOG_FILE): 
-        novo_log.to_csv(LOG_FILE, index=False, sep=';', encoding='utf-8-sig')
-    else: 
-        novo_log.to_csv(LOG_FILE, mode='a', header=False, index=False, sep=';', encoding='utf-8-sig')
+    if not os.path.isfile(LOG_FILE): novo_log.to_csv(LOG_FILE, index=False, sep=';', encoding='utf-8-sig')
+    else: novo_log.to_csv(LOG_FILE, mode='a', header=False, index=False, sep=';', encoding='utf-8-sig')
 
 def formatar_moeda(valor):
-    """Formata float para moeda BRL visual."""
     return f"R$ {float(valor):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
 def limpar_nome_produto(nome_bruto):
-    """Remove números e EAN do nome do produto usando Regex."""
     nome = re.sub(r'\b\d{5,8}\b', '', nome_bruto) 
     nome = re.sub(r'\d{1,2}-[a-zA-Z]{3}(-\d{2,4})?', '', nome) 
     return nome.replace('.', '').replace('-', '').strip()[:22]
 
 def palpite_categoria(nome):
-    """Classifica o produto em categorias com base em palavras-chave no nome."""
+    """Motor Cirúrgico com Exceções para Evitar Falsos Positivos"""
     txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
-    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY"]): return "Tabacaria"
-    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL"]): return "Bebidas"
-    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE"]): return "Bomboniere"
-    if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO"]): return "Remédios"
+    
+    # 1. EXCEÇÕES (Palavras que têm "Doce" ou "Chocolate" mas NÃO são da Bomboniere)
+    if "BATATA DOCE" in txt: return "Mercearia"
+    if "ITALAKINHO" in txt: return "Mercearia"
+    
+    # 2. REGRAS GERAIS (Apenas as 5 Categorias Oficiais)
+    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG"]): 
+        return "Tabacaria"
+        
+    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA"]): 
+        return "Bebidas"
+        
+    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "PE DE MOLEQUE", "MOLEQUE", "BALA"]): 
+        return "Bomboniere"
+        
+    if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO"]): 
+        return "Remédios"
+        
     return "Mercearia"
 
-# ATENÇÃO: Esta é a função vital para evitar o NameError na leitura do arquivo.
 def processar_pdf(file):
-    """Lê o PDF, extrai período e itens, e retorna os dados formatados."""
+    """Nova lógica BLINDADA contra sumiço de valores (Lê PCT, CX, BD, etc.)"""
     dados = []
     file.seek(0)
     with pdfplumber.open(file) as pdf:
@@ -174,28 +178,48 @@ def processar_pdf(file):
         periodo = f"{match_d.group(1)} a {match_d.group(2)}" if match_d else "DATA DESCONHECIDA"
         
         for page in pdf.pages:
-            linhas = (page.extract_text() or "").split('\n')
+            # Substitui aspas e quebras de linha para evitar quebra na leitura do CSV
+            texto_limpo = (page.extract_text() or "").replace('"', '').replace('\r', '')
+            linhas = texto_limpo.split('\n')
+            
             for linha in linhas:
                 try:
                     valores = re.findall(r'\d+,\d{2}', linha)
+                    # Se tem pelo menos 4 valores numéricos de moeda/quantidade, é um produto!
                     if len(valores) >= 4:
                         ean_m = re.search(r'\b\d{8,14}\b', linha)
-                        nome_m = re.search(r'(.+?)\s+(?:UN|KG)\s+\d+,\d{2}', linha)
-                        n_bruto = nome_m.group(1).replace(ean_m.group() if ean_m else "", "").strip()
+                        
+                        # Isola a string removendo o EAN
+                        str_sem_ean = linha.replace(ean_m.group(), "") if ean_m else linha
+                        
+                        # O segredo: Corta a string exatamente onde começa a quantidade (ex: 1,00)
+                        partes = re.split(r'\s*\b\d+,\d{2}\b', str_sem_ean.strip())
+                        n_bruto = partes[0].strip()
+                        
+                        # Remove a sigla da unidade (UN, PCT, CX) que fica grudada no final do nome
+                        n_bruto = re.sub(r'\s+(UN|KG|CX|PCT|L|ML|G|KIT|M|DZ|BD|FD|R\$|LT|LATA|GF)\b$', '', n_bruto, flags=re.IGNORECASE).strip()
+                        
                         nome_limpo = limpar_nome_produto(n_bruto)
+                        
+                        # O Total Bruto é sempre o antepenúltimo valor na lista de extração
                         val = float(valores[-4].replace(',', '.'))
+                        
                         dados.append({"Nome": nome_limpo, "Cat": palpite_categoria(nome_limpo), "Valor": val})
-                except: 
+                except Exception as e: 
                     continue
     return dados, periodo
 
 def gerar_html_interativo(df, periodo, total_geral):
-    """Gera string de um HTML offline robusto para download."""
-    cores = { "Tabacaria": {"bg": "#334155", "glow": "rgba(51, 65, 85, 0.2)"}, "Bebidas": {"bg": "#1e3a8a", "glow": "rgba(30, 58, 138, 0.2)"}, "Bomboniere": {"bg": "#0f766e", "glow": "rgba(15, 118, 110, 0.2)"}, "Remédios": {"bg": "#9a3412", "glow": "rgba(154, 52, 18, 0.2)"}, "Mercearia": {"bg": "#0369a1", "glow": "rgba(3, 105, 161, 0.2)"} }
     colunas_html = ""
-    for i, (cat, paleta) in enumerate(cores.items()):
+    # Pega apenas as categorias presentes nas nossas 5 regras
+    categorias_presentes = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
+    
+    for i, cat in enumerate(categorias_presentes):
+        # Se por acaso a categoria não existir no relatório atual, o sum é zero (evita quebrar)
+        paleta = CORES_CATEGORIAS.get(cat, {"bg": "#334155", "glow": "rgba(51, 65, 85, 0.2)"})
         itens_cat = df[df['Cat'] == cat]
         valor_cat = itens_cat['Valor'].sum()
+        
         cards_html = "".join([f'<div class="cyber-card"><div class="card-title">{row["Nome"]}</div><div class="card-value">R$ {row["Valor"]:,.2f}</div></div>' for _, row in itens_cat.iterrows()])
         colunas_html += f"""
         <div class="coluna-categoria">
@@ -261,15 +285,13 @@ def gerar_html_interativo(df, periodo, total_geral):
 # ==========================================
 config_usuarios = carregar_configuracoes()
 
-# Inicializa o Autenticador puxando as credenciais corretas
 credentials_dict = {"usernames": {}}
 for u, data in config_usuarios.items():
     credentials_dict["usernames"][u] = {"name": data["name"], "password": data["password"]}
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v19", "auth_key_v19", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v21", "auth_key_v21", expiry_days=30)
 authenticator.login(location='main')
 
-# Fluxo após o login ser efetuado com sucesso
 if st.session_state.get("authentication_status"):
     user_logado = st.session_state['username']
     garantir_mesa_limpa(user_logado)
@@ -303,7 +325,6 @@ if st.session_state.get("authentication_status"):
 
     authenticator.logout("Encerrar Sessao", "sidebar")
 
-    # --- PÁGINA 1: ANÁLISE DE RELATÓRIO ---
     if pagina == "Análise de Relatório":
         st.markdown("<h2 style='color:white; font-size:22px; margin-bottom: 5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
         trial_end = datetime.strptime(config_usuarios[user_logado]["trial_end"], "%Y-%m-%d").date()
@@ -345,7 +366,7 @@ if st.session_state.get("authentication_status"):
                 with col_filtros:
                     st.markdown("<h4 style='color:#94a3b8; font-size:12px; margin-bottom:10px; text-transform:uppercase;'>Categorias</h4>", unsafe_allow_html=True)
                     for cat in categorias:
-                        v = df[df['Cat'] == cat]['Valor'].sum()
+                        v = df[df['Cat'] == cat]['Valor'].sum() if not df.empty else 0
                         c_chk, c_btn, c_val = st.columns([1, 5, 3])
                         with c_chk:
                             if st.checkbox("", value=True, key=f"chk_{cat}"): selecionadas.append(cat)
@@ -358,7 +379,7 @@ if st.session_state.get("authentication_status"):
 
                 with col_total:
                     st.markdown("<h4 style='color:#94a3b8; font-size:12px; margin-bottom:10px; text-transform:uppercase;'>Resumo Financeiro</h4>", unsafe_allow_html=True)
-                    soma_f = df[df['Cat'].isin(selecionadas)]['Valor'].sum()
+                    soma_f = df[df['Cat'].isin(selecionadas)]['Valor'].sum() if not df.empty else 0
                     st.markdown(f'''
                     <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 20px; border-radius: 8px; text-align: center; border: 1px solid #3b82f6;">
                         <p style="margin:0; color:#cbd5e1; font-size:11px; font-weight:bold; letter-spacing:1px;">CAIXA TOTAL BRUTO</p>
@@ -381,7 +402,6 @@ if st.session_state.get("authentication_status"):
                     else:
                         st.markdown("""<div style="background:#1e293b; padding:15px; border-radius:6px; text-align:center; border: 1px dashed #334155;"><p style="color:#94a3b8; font-size:11px; margin:0;">👈 Clique na categoria para inspecionar</p></div>""", unsafe_allow_html=True)
 
-    # --- PÁGINA 2: LOTE ---
     elif pagina == "Gerar Multiplos Relatorios":
         if not config_usuarios[user_logado]["batch_allowed"] and user_logado != "madson":
             st.toast("🔒 Sem permissão para essa função, requer mudança de plano.")
@@ -398,7 +418,6 @@ if st.session_state.get("authentication_status"):
                     except: continue
                 st.success("Arquivos processados.")
 
-    # --- PÁGINA 3: HISTÓRICO ---
     elif pagina == "Historico de Atividades":
         if user_logado != "madson":
             st.toast("🔒 Sem permissão para essa função, requer mudança de plano.")
@@ -407,7 +426,6 @@ if st.session_state.get("authentication_status"):
             st.markdown("<h2 style='color:white; font-size:22px;'>Histórico de Registros</h2>", unsafe_allow_html=True)
             if os.path.exists(LOG_FILE): st.dataframe(pd.read_csv(LOG_FILE, sep=';').sort_index(ascending=False), use_container_width=True)
 
-    # --- PÁGINA 4: PERMISSÕES (ADMIN) ---
     elif pagina == "Central de Permissões":
         if user_logado != "madson":
             st.toast("🔒 Sem permissão para essa função, requer mudança de plano.")
@@ -421,7 +439,6 @@ if st.session_state.get("authentication_status"):
                 dados_usr = config_usuarios[usr_selecionado]
                 with st.form("form_admin"):
                     st.markdown(f"<h4 style='color:#38bdf8; font-size:16px;'>Editando: {usr_selecionado.capitalize()}</h4>", unsafe_allow_html=True)
-                    
                     nova_senha = st.text_input("Senha de Acesso do Usuário", value=dados_usr["password"])
                     novo_batch = st.checkbox("Habilitar 'Gerar Múltiplos Relatórios'", value=dados_usr["batch_allowed"])
                     nova_cota = st.number_input("Cota Restante de Uploads", min_value=0, value=dados_usr["quota"], step=1)
