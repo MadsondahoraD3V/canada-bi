@@ -18,7 +18,7 @@ st.set_page_config(page_title="Canadá BI - Corporate", layout="wide")
 st.markdown("""
     <style>
     /* =========================================
-       BLINDAGEM ANTI-FORK E AJUSTE DE ECRÃ
+       BLINDAGEM ANTI-FORK E AJUSTE DE TELA
        ========================================= */
     header { visibility: hidden !important; display: none !important; }
     [data-testid="stHeader"] { display: none !important; }
@@ -34,7 +34,7 @@ st.markdown("""
         backdrop-filter: blur(12px) !important;
     }
     
-    /* TIPOGRAFIA FLUIDA RESPONSIVA (Adapta-se ao ecrã automaticamente) */
+    /* TIPOGRAFIA FLUIDA RESPONSIVA (Adapta à tela automaticamente) */
     .stTextInput label p, .stPasswordInput label p, .stSelectbox label p, .stNumberInput label p, .stDateInput label p { 
         color: #e2e8f0 !important; font-weight: 600 !important; 
         font-size: clamp(11px, 1vw, 13px) !important; 
@@ -214,38 +214,39 @@ def limpar_nome_produto(nome_bruto):
 
 def palpite_categoria(nome):
     """
-    Motor treinado com o Dataset Mestre + Auditorias constantes.
+    Motor treinado com o Dataset Mestre + Auditorias Constantes da Canadá BI.
     """
     txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
     
-    # 1. EXCEÇÕES BLINDADAS (Previnem falsos positivos)
+    # 1. EXCEÇÕES BLINDADAS (Previnem falsos positivos - como a Cenoura não ir pro Remédio)
     if any(k in txt for k in ["BATATA DOCE", "ITALAKINHO", "DOCE DE LEITE", "ERVADOCE", "ERVA DOCE", "MARAGOGI DOCE", "SHAMPOO", "CONDICIONADOR", "CREME SEDA", "KIT SEDA", "CENOURA"]): 
         return "Mercearia", False
         
-    # 2. REGRAS GERAIS DE 4 CATEGORIAS
+    # 2. REGRAS GERAIS DE 4 CATEGORIAS PRINCIPAIS
     if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG", "GUDANG", "EIGHT", "VILA RICA", "ISQUEIRO", "BIC ", "FOSFORO", "MAXIMILIAM", "NISE"]): 
         return "Tabacaria", False
         
-    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA", "IMPERIO", "BEATS", "SPATEN", "CABARE", "CONHAQUE", "DREHER", "DEVASSA", "CACHACA"]): 
+    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA", "IMPERIO", "BEATS", "SPATEN", "CABARE", "CONHAQUE", "DREHER", "DEVASSA", "CACHACA", "CARANGUEJO", "CARANGUEIJO"]): 
         return "Bebidas Alcoólicas", False
         
-    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA", "ICEKISS", "MENTOS", "CHICLE", "EMBARE", "FREEGELLS", "GOMETS", "BATOM", "SERENATA", "KITKAT", "CHOKREM", "OLHINHO", "PIRULITO", "PESCOCO DE GIRAFA", "DOCINHO"]): 
+    # ATENÇÃO: Todos os salgadinhos, pipocas e wafers caem na Bomboniere antes de chegarem à Mercearia
+    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA", "ICEKISS", "MENTOS", "CHICLE", "EMBARE", "FREEGELLS", "GOMETS", "BATOM", "SERENATA", "KITKAT", "CHOKREM", "OLHINHO", "PIRULITO", "PESCOCO DE GIRAFA", "DOCINHO", "PIPOCA", "PIPPOS", "TRELOSO", "KRO", "SALGADINHO", "SALG", "WAFER", "WAFFER", "TORRESMINHO", "BOKUS", "CREMOSIN", "PICOLE", "SORV"]): 
         return "Bomboniere", False
         
     if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO", "PARACETAMOL", "CIMEGRIPE", "NEOSALDINA", "NIMESULIDA", "NEOLEFRIN"]): 
         return "Remédios", False
 
-    # 3. MERCEARIA EXPLÍCITA (Treinada pelo Dataset de Estoque + Ajustes Finos de Auditoria)
+    # 3. MERCEARIA EXPLÍCITA (Garante que os itens fiquem na matemática correta e limpa o Fallback)
     mercearia_explicita = [
         "RACAO", "PAO", "PAES", "COENTRO", "QUEIJO", "LACTEA", "FEIJOADA", "SABAO", "MARGARINA", "MARG ",
         "MACARRAO", "MAC ", "FARINHA", "PIMENTAO", "LEITE", "OLEO", "CAFE", "OVO", "AMENDOIM", "BATATA", "BATATINHA",
         "BOLACHA", "REQUEIJAO", "LINGUICA", "LING ", "MISTURA", "CARNE", "ALHO", "SAZON", "LAMEN", "MIOJO",
         "NISSIM", "PAPEL", "SARDINHA", "DESINF", "SALSICHA", "BISCOITO", "IOGURTE", "ESCOVA", "LAMINA",
-        "CREME", "EMPANADO", "CEBOLA", "GOMA", "FRANGO", "COXA", "CARANGUEJO", "HAMBURGUER", "MILHO",
-        "AGUA SANIT", "SAL ", "BOTIJAO", "PIPPOS", "SALGADINHO", "MOLHO", "MACAXEIRA", "BISTECA", "BRILHOTEX",
-        "TRELOSO", "LIMPOL", "SABONETE", "REXONA", "AMACIANTE", "CALDO", "FLOCAO", "FLOKAO", "MAIZENA",
-        "ESPONJA", "ESP ", "ACUCAR", "PIPOCA", "ABSORVENTE", "COLORAL", "FIGADO", "DANONE", "PEITO", "WAFER",
-        "BOKUS", "DUMEL", "NATVILLE", "TOMATE", "LIMAO", "ROSQUINHA", "AGUA OXIGENADA", "HASTES", "COTTON",
+        "CREME", "EMPANADO", "CEBOLA", "GOMA", "FRANGO", "COXA", "HAMBURGUER", "MILHO",
+        "AGUA SANIT", "SAL ", "BOTIJAO", "MOLHO", "MACAXEIRA", "BISTECA", "BRILHOTEX",
+        "LIMPOL", "SABONETE", "REXONA", "AMACIANTE", "CALDO", "FLOCAO", "FLOKAO", "MAIZENA",
+        "ESPONJA", "ESP ", "ACUCAR", "ABSORVENTE", "COLORAL", "FIGADO", "DANONE", "PEITO",
+        "DUMEL", "NATVILLE", "TOMATE", "LIMAO", "ROSQUINHA", "AGUA OXIGENADA", "HASTES", "COTTON",
         "AGUA SCHIN", "KAPO", "REFRESCO", "AGUA MINERAL", "COCA", "AGUA DE COCO", "REFRIGERANTE", "DORE", "CC ORIG", "GUARANA",
         "FANTA", "SPRITE", "PEPSI", "ENERGETICO", "MONSTER", "RED BULL", "TANG", "FRISCO", "MID", "SUKITA", "KUAT", "FYS",
         "ACHOC", "NESCAU", "ARROZ", "AVEIA", "AZEITONA", "BANANA", "CATCHUP", "KETCHUP", "CHARQUE", "DOWNY", "YPÊ", "MINUANO",
@@ -253,10 +254,10 @@ def palpite_categoria(nome):
         "PRESTOBARBA", "GILLETTE", "PROBAK", "HERBISSIMO", "COTONETE", "ALGODAO", "GAS ", "CARVAO", "GELO", "PILHA", "RAIOVAC",
         "VASSOURA", "VELA", "MUCILON", "CREMOGEMA", "CHIMICHURRI", "COMINHO", "OREGANO", "LOURO", "PIMENTA",
         "BISC ", "PANETONE", "TORRADA", "SASSAMI", "FILE", "MOELA", "CORACAO", "BACON", "PRESUNTO", "FIAMBRE",
-        "BOLDO", "TEMPERO", "DETERGENTE", "DETERG ", "ACAI", "PIC ", "PIC STER", "PICOLE", "CREMOSIN", "SORV",
+        "BOLDO", "TEMPERO", "DETERGENTE", "DETERG ", "ACAI", "PIC ", "PIC STER",
         "INFINITY", "POLPA", "FEIJAO", "DUETO", "TAMPICO", "OSSINHO", "PINCA", "PINÇAS", "COCOROTE", "LARANJA", "ACAFRAO", 
         "DEL VALLE", "ULTRA COLA", "MORTADELA", "ASA ", "TODYNHO", "TODDY", "CAMOMILA", "FRALDA", "FERMENTO", "RAPADURA", "GALINHA",
-        "SEMPRE LIVRE", "CALABRESA", "VINAGRE", "SKINKA", "REMOVEDOR", "ESMALTE", "H2O", "MARACUJA", "ABACATE", "SODA", "COCO", "SUPER SIGMA", "SALG"
+        "SEMPRE LIVRE", "CALABRESA", "VINAGRE", "SKINKA", "REMOVEDOR", "ESMALTE", "H2O", "MARACUJA", "ABACATE", "SODA", "COCO", "SUPER SIGMA", "CREAM CRACKER"
     ]
     if any(k in txt for k in mercearia_explicita):
         return "Mercearia", False
@@ -389,7 +390,7 @@ if not st.session_state.get("authentication_status"):
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2: st.image("logo.png", use_container_width=True)
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v44", "auth_key_v44", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v46", "auth_key_v46", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
