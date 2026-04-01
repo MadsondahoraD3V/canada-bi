@@ -8,23 +8,21 @@ from decimal import Decimal
 from datetime import datetime, date
 import os
 import json
-import time
 
 # ==========================================
 # 1. CONFIGURAÇÕES VISUAIS E CSS (CORPORATIVO)
 # ==========================================
+# Configuração inicial da página para ocupar toda a tela
 st.set_page_config(page_title="Canadá BI - Corporate", layout="wide")
 
+# Estilos CSS injetados para forçar o layout corporativo escuro
 st.markdown("""
     <style>
-    /* Fundo Escuro Corporativo */
     .stApp, .stApp > header { background-color: #0f172a !important; }
     [data-testid="stSidebar"] { background-color: #0f172a !important; border-right: 1px solid #1e293b !important; }
     
-    /* Textos dos formulários legíveis */
     .stTextInput label p, .stPasswordInput label p { color: #f8fafc !important; font-weight: 600 !important; }
     
-    /* Upload limpo e arredondado */
     [data-testid="stFileUploadDropzone"] { background-color: #1e293b !important; }
     [data-testid="stFileUploader"] {
         background-color: #1e293b !important; border-radius: 12px; padding: 15px;
@@ -33,7 +31,6 @@ st.markdown("""
     [data-testid="stFileUploaderDropzoneInstructions"] { display: none; }
     small { display: none !important; }
     
-    /* Menu Lateral Futurista */
     div[role="radiogroup"] > label > div:first-of-type { display: none; }
     div[role="radiogroup"] > label {
         background: #1e293b !important; border: 1px solid #334155 !important; border-radius: 6px;
@@ -44,12 +41,10 @@ st.markdown("""
     div[role="radiogroup"] > label:hover { background: #0f172a !important; border-color: #0ea5e9 !important; color: #0ea5e9 !important; transform: translateX(5px); }
     div[role="radiogroup"] > label[data-baseweb="radio"] > div:last-child { width: 100%; }
     
-    /* BOTÕES MENORES E DISCRETOS */
     .stButton > button, .stDownloadButton > button {
         padding: 2px 10px !important; font-size: 12px !important; min-height: 30px !important; border-radius: 6px !important;
     }
 
-    /* COMPACTAÇÃO DA COLUNA DE CATEGORIAS */
     div[data-testid="column"]:nth-of-type(1) div[data-testid="stHorizontalBlock"] {
         gap: 0.1rem !important; align-items: center !important; margin-bottom: -15px !important;
     }
@@ -60,12 +55,10 @@ st.markdown("""
     }
     .botao-categoria button:hover { border-color: #0ea5e9 !important; color: #0ea5e9 !important; background-color: rgba(14, 165, 233, 0.1) !important; }
 
-    /* Scrollbar minimalista */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 
-    /* Assinatura global invencível e à esquerda */
     .assinatura-master {
         position: fixed; bottom: 15px; left: 15px; background: rgba(15, 23, 42, 0.95); color: #94a3b8;
         padding: 8px 15px; border-radius: 20px; font-size: 10px; border: 1px solid #334155; 
@@ -86,7 +79,7 @@ st.markdown("""
 CONFIG_FILE = "usuarios_config.json"
 LOG_FILE = "log_atividades.csv"
 
-# Molde padrão de configurações com todas as chaves exigidas
+# Molde padrão de usuários
 DEFAULT_CONFIG = {
     "madson": {"name": "Madson", "password": "084269", "batch_allowed": True, "quota": 999, "trial_end": "2099-12-31"},
     "joacildo": {"name": "Joacildo", "password": "canada2026", "batch_allowed": False, "quota": 10, "trial_end": "2026-12-31"},
@@ -95,47 +88,43 @@ DEFAULT_CONFIG = {
 }
 
 def salvar_configuracoes(config_data):
-    """Salva os dados no arquivo JSON."""
-    with open(CONFIG_FILE, 'w') as f: json.dump(config_data, f)
+    """Salva o dicionário de usuários no arquivo JSON de forma segura."""
+    with open(CONFIG_FILE, 'w') as f: 
+        json.dump(config_data, f)
 
 def carregar_configuracoes():
-    """Lê as configurações e repara dados ausentes (Migração)."""
-    # 1. Se o arquivo não existe, cria um novo a partir do molde.
+    """Carrega o JSON e, se faltarem dados (como senha de atualizações anteriores), injeta os valores padrão."""
     if not os.path.exists(CONFIG_FILE):
         salvar_configuracoes(DEFAULT_CONFIG)
         return DEFAULT_CONFIG
     
-    # 2. Se o arquivo existe, lê os dados.
     with open(CONFIG_FILE, 'r') as f:
         dados_salvos = json.load(f)
         
-    # 3. MIGRACÃO AUTOMÁTICA: Compara os dados salvos com o molde padrão.
-    # Isso resolve o KeyError se o arquivo velho não tiver as senhas (password e name).
     precisa_atualizar = False
     for usuario, config_padrao in DEFAULT_CONFIG.items():
-        # Se um novo usuário foi adicionado ao molde, adicionamos ao arquivo
         if usuario not in dados_salvos:
             dados_salvos[usuario] = config_padrao
             precisa_atualizar = True
         else:
-            # Se faltar chaves (como 'password' ou 'name') num usuário existente, nós as injetamos
             for chave, valor in config_padrao.items():
                 if chave not in dados_salvos[usuario]:
                     dados_salvos[usuario][chave] = valor
                     precisa_atualizar = True
                     
-    # Salva o arquivo corrigido se houve alguma injeção de dados
     if precisa_atualizar:
         salvar_configuracoes(dados_salvos)
         
     return dados_salvos
 
 def consumir_cota(username, config_data):
+    """Deduz 1 da cota de uploads do usuário não-administrador."""
     if username != "madson" and username in config_data:
         config_data[username]["quota"] -= 1
         salvar_configuracoes(config_data)
 
 def garantir_mesa_limpa(usuario_atual):
+    """Evita o vazamento de memória da sessão apagando arquivos caso um login diferente seja efetuado."""
     if "usuario_anterior" not in st.session_state:
         st.session_state.usuario_anterior = usuario_atual
     if st.session_state.usuario_anterior != usuario_atual:
@@ -144,23 +133,29 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE E GERADOR DE HTML
+# 3. FUNÇÕES CORE (INCLUINDO PROCESSAR_PDF)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
+    """Salva a ação gerada em um arquivo de histórico CSV."""
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     novo_log = pd.DataFrame([{"Data/Hora": agora, "Usuário": usuario, "Arquivo": arquivo, "Período": periodo}])
-    if not os.path.isfile(LOG_FILE): novo_log.to_csv(LOG_FILE, index=False, sep=';', encoding='utf-8-sig')
-    else: novo_log.to_csv(LOG_FILE, mode='a', header=False, index=False, sep=';', encoding='utf-8-sig')
+    if not os.path.isfile(LOG_FILE): 
+        novo_log.to_csv(LOG_FILE, index=False, sep=';', encoding='utf-8-sig')
+    else: 
+        novo_log.to_csv(LOG_FILE, mode='a', header=False, index=False, sep=';', encoding='utf-8-sig')
 
 def formatar_moeda(valor):
+    """Formata float para moeda BRL visual."""
     return f"R$ {float(valor):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
 def limpar_nome_produto(nome_bruto):
+    """Remove números e EAN do nome do produto usando Regex."""
     nome = re.sub(r'\b\d{5,8}\b', '', nome_bruto) 
     nome = re.sub(r'\d{1,2}-[a-zA-Z]{3}(-\d{2,4})?', '', nome) 
     return nome.replace('.', '').replace('-', '').strip()[:22]
 
 def palpite_categoria(nome):
+    """Classifica o produto em categorias com base em palavras-chave no nome."""
     txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
     if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY"]): return "Tabacaria"
     if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL"]): return "Bebidas"
@@ -168,7 +163,34 @@ def palpite_categoria(nome):
     if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO"]): return "Remédios"
     return "Mercearia"
 
+# ATENÇÃO: Esta é a função vital para evitar o NameError na leitura do arquivo.
+def processar_pdf(file):
+    """Lê o PDF, extrai período e itens, e retorna os dados formatados."""
+    dados = []
+    file.seek(0)
+    with pdfplumber.open(file) as pdf:
+        txt_topo = (pdf.pages[0].extract_text() or "")
+        match_d = re.search(r'(\d{2}/\d{2}/\d{4})\s*[AÀaà]\s*(\d{2}/\d{2}/\d{4})', txt_topo)
+        periodo = f"{match_d.group(1)} a {match_d.group(2)}" if match_d else "DATA DESCONHECIDA"
+        
+        for page in pdf.pages:
+            linhas = (page.extract_text() or "").split('\n')
+            for linha in linhas:
+                try:
+                    valores = re.findall(r'\d+,\d{2}', linha)
+                    if len(valores) >= 4:
+                        ean_m = re.search(r'\b\d{8,14}\b', linha)
+                        nome_m = re.search(r'(.+?)\s+(?:UN|KG)\s+\d+,\d{2}', linha)
+                        n_bruto = nome_m.group(1).replace(ean_m.group() if ean_m else "", "").strip()
+                        nome_limpo = limpar_nome_produto(n_bruto)
+                        val = float(valores[-4].replace(',', '.'))
+                        dados.append({"Nome": nome_limpo, "Cat": palpite_categoria(nome_limpo), "Valor": val})
+                except: 
+                    continue
+    return dados, periodo
+
 def gerar_html_interativo(df, periodo, total_geral):
+    """Gera string de um HTML offline robusto para download."""
     cores = { "Tabacaria": {"bg": "#334155", "glow": "rgba(51, 65, 85, 0.2)"}, "Bebidas": {"bg": "#1e3a8a", "glow": "rgba(30, 58, 138, 0.2)"}, "Bomboniere": {"bg": "#0f766e", "glow": "rgba(15, 118, 110, 0.2)"}, "Remédios": {"bg": "#9a3412", "glow": "rgba(154, 52, 18, 0.2)"}, "Mercearia": {"bg": "#0369a1", "glow": "rgba(3, 105, 161, 0.2)"} }
     colunas_html = ""
     for i, (cat, paleta) in enumerate(cores.items()):
@@ -237,17 +259,17 @@ def gerar_html_interativo(df, periodo, total_geral):
 # ==========================================
 # 4. SEGURANÇA E LOGIN DINÂMICO
 # ==========================================
-# Carrega os dados migrados com segurança
 config_usuarios = carregar_configuracoes()
 
+# Inicializa o Autenticador puxando as credenciais corretas
 credentials_dict = {"usernames": {}}
 for u, data in config_usuarios.items():
-    # Isso impede o KeyError, pois carregar_configuracoes agora garante que essas chaves existem!
     credentials_dict["usernames"][u] = {"name": data["name"], "password": data["password"]}
 
 authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v19", "auth_key_v19", expiry_days=30)
 authenticator.login(location='main')
 
+# Fluxo após o login ser efetuado com sucesso
 if st.session_state.get("authentication_status"):
     user_logado = st.session_state['username']
     garantir_mesa_limpa(user_logado)
@@ -257,7 +279,6 @@ if st.session_state.get("authentication_status"):
 
     st.sidebar.markdown(f"<h3 style='color:#f8fafc; font-size:16px; margin-bottom: 20px;'>Usuário: {st.session_state['name']}</h3>", unsafe_allow_html=True)
     
-    # Efeito Visual de Paywall nos menus restritos
     if user_logado != 'madson':
         st.markdown("""
         <style>
@@ -282,12 +303,12 @@ if st.session_state.get("authentication_status"):
 
     authenticator.logout("Encerrar Sessao", "sidebar")
 
-    # --- PÁGINAS DO SISTEMA ---
+    # --- PÁGINA 1: ANÁLISE DE RELATÓRIO ---
     if pagina == "Análise de Relatório":
         st.markdown("<h2 style='color:white; font-size:22px; margin-bottom: 5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
         trial_end = datetime.strptime(config_usuarios[user_logado]["trial_end"], "%Y-%m-%d").date()
         
-        if date.today() > trial_end or config_usuarios[user_logado]["quota"] <= 0 and user_logado != "madson":
+        if date.today() > trial_end or (config_usuarios[user_logado]["quota"] <= 0 and user_logado != "madson"):
             st.error("Acesso Expirado ou Sem Cotas. Contate o Administrador.")
         else:
             if 'arquivo_carregado' not in st.session_state: st.session_state.arquivo_carregado = None
@@ -360,6 +381,7 @@ if st.session_state.get("authentication_status"):
                     else:
                         st.markdown("""<div style="background:#1e293b; padding:15px; border-radius:6px; text-align:center; border: 1px dashed #334155;"><p style="color:#94a3b8; font-size:11px; margin:0;">👈 Clique na categoria para inspecionar</p></div>""", unsafe_allow_html=True)
 
+    # --- PÁGINA 2: LOTE ---
     elif pagina == "Gerar Multiplos Relatorios":
         if not config_usuarios[user_logado]["batch_allowed"] and user_logado != "madson":
             st.toast("🔒 Sem permissão para essa função, requer mudança de plano.")
@@ -376,6 +398,7 @@ if st.session_state.get("authentication_status"):
                     except: continue
                 st.success("Arquivos processados.")
 
+    # --- PÁGINA 3: HISTÓRICO ---
     elif pagina == "Historico de Atividades":
         if user_logado != "madson":
             st.toast("🔒 Sem permissão para essa função, requer mudança de plano.")
@@ -384,6 +407,7 @@ if st.session_state.get("authentication_status"):
             st.markdown("<h2 style='color:white; font-size:22px;'>Histórico de Registros</h2>", unsafe_allow_html=True)
             if os.path.exists(LOG_FILE): st.dataframe(pd.read_csv(LOG_FILE, sep=';').sort_index(ascending=False), use_container_width=True)
 
+    # --- PÁGINA 4: PERMISSÕES (ADMIN) ---
     elif pagina == "Central de Permissões":
         if user_logado != "madson":
             st.toast("🔒 Sem permissão para essa função, requer mudança de plano.")
@@ -397,6 +421,7 @@ if st.session_state.get("authentication_status"):
                 dados_usr = config_usuarios[usr_selecionado]
                 with st.form("form_admin"):
                     st.markdown(f"<h4 style='color:#38bdf8; font-size:16px;'>Editando: {usr_selecionado.capitalize()}</h4>", unsafe_allow_html=True)
+                    
                     nova_senha = st.text_input("Senha de Acesso do Usuário", value=dados_usr["password"])
                     novo_batch = st.checkbox("Habilitar 'Gerar Múltiplos Relatórios'", value=dados_usr["batch_allowed"])
                     nova_cota = st.number_input("Cota Restante de Uploads", min_value=0, value=dados_usr["quota"], step=1)
