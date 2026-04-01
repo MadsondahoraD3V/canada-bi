@@ -16,11 +16,14 @@ st.set_page_config(page_title="Canadá BI - Corporate", layout="wide")
 
 st.markdown("""
     <style>
+    /* Fundo Escuro Corporativo */
     .stApp, .stApp > header { background-color: #0f172a !important; }
     [data-testid="stSidebar"] { background-color: #0f172a !important; border-right: 1px solid #1e293b !important; }
     
+    /* Textos dos formulários legíveis */
     .stTextInput label p, .stPasswordInput label p { color: #f8fafc !important; font-weight: 600 !important; }
     
+    /* Upload limpo e arredondado */
     [data-testid="stFileUploadDropzone"] { background-color: #1e293b !important; }
     [data-testid="stFileUploader"] {
         background-color: #1e293b !important; border-radius: 12px; padding: 15px;
@@ -29,6 +32,7 @@ st.markdown("""
     [data-testid="stFileUploaderDropzoneInstructions"] { display: none; }
     small { display: none !important; }
     
+    /* Menu Lateral Futurista */
     div[role="radiogroup"] > label > div:first-of-type { display: none; }
     div[role="radiogroup"] > label {
         background: #1e293b !important; border: 1px solid #334155 !important; border-radius: 6px;
@@ -39,10 +43,12 @@ st.markdown("""
     div[role="radiogroup"] > label:hover { background: #0f172a !important; border-color: #0ea5e9 !important; color: #0ea5e9 !important; transform: translateX(5px); }
     div[role="radiogroup"] > label[data-baseweb="radio"] > div:last-child { width: 100%; }
     
+    /* BOTÕES MENORES E DISCRETOS */
     .stButton > button, .stDownloadButton > button {
         padding: 2px 10px !important; font-size: 12px !important; min-height: 30px !important; border-radius: 6px !important;
     }
 
+    /* COMPACTAÇÃO DA COLUNA DE CATEGORIAS */
     div[data-testid="column"]:nth-of-type(1) div[data-testid="stHorizontalBlock"] {
         gap: 0.1rem !important; align-items: center !important; margin-bottom: -15px !important;
     }
@@ -53,10 +59,12 @@ st.markdown("""
     }
     .botao-categoria button:hover { border-color: #0ea5e9 !important; color: #0ea5e9 !important; background-color: rgba(14, 165, 233, 0.1) !important; }
 
+    /* Scrollbar minimalista */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 
+    /* Assinatura global invencível e à esquerda */
     .assinatura-master {
         position: fixed; bottom: 15px; left: 15px; background: rgba(15, 23, 42, 0.95); color: #94a3b8;
         padding: 8px 15px; border-radius: 20px; font-size: 10px; border: 1px solid #334155; 
@@ -77,7 +85,6 @@ st.markdown("""
 CONFIG_FILE = "usuarios_config.json"
 LOG_FILE = "log_atividades.csv"
 
-# CORES FIXAS PARA AS 5 CATEGORIAS OFICIAIS
 CORES_CATEGORIAS = {
     "Tabacaria": {"bg": "#334155", "glow": "rgba(51, 65, 85, 0.2)"},
     "Bebidas": {"bg": "#1e3a8a", "glow": "rgba(30, 58, 138, 0.2)"},
@@ -129,7 +136,7 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE (NOVA CLASSIFICAÇÃO E LEITURA 100% SEGURA)
+# 3. FUNÇÕES CORE E NOVA LÓGICA DE EXTRAÇÃO
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -146,30 +153,27 @@ def limpar_nome_produto(nome_bruto):
     return nome.replace('.', '').replace('-', '').strip()[:22]
 
 def palpite_categoria(nome):
-    """Motor Cirúrgico com Exceções para Evitar Falsos Positivos"""
+    """Categorizador Perfeito conforme regras rigorosas do Madson"""
     txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
     
-    # 1. EXCEÇÕES (Palavras que têm "Doce" ou "Chocolate" mas NÃO são da Bomboniere)
+    # Exceções blindadas para evitar falsos positivos
     if "BATATA DOCE" in txt: return "Mercearia"
     if "ITALAKINHO" in txt: return "Mercearia"
     
-    # 2. REGRAS GERAIS (Apenas as 5 Categorias Oficiais)
-    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG"]): 
+    # As 5 Categorias Oficiais
+    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG", "GUDANG"]): 
         return "Tabacaria"
-        
     if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA"]): 
         return "Bebidas"
-        
-    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "PE DE MOLEQUE", "MOLEQUE", "BALA"]): 
+    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA"]): 
         return "Bomboniere"
-        
     if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO"]): 
         return "Remédios"
         
     return "Mercearia"
 
 def processar_pdf(file):
-    """Nova lógica BLINDADA contra sumiço de valores (Lê PCT, CX, BD, etc.)"""
+    """Novo motor que não pula pacotes e ignora linhas de 'TOTAL'"""
     dados = []
     file.seek(0)
     with pdfplumber.open(file) as pdf:
@@ -178,30 +182,32 @@ def processar_pdf(file):
         periodo = f"{match_d.group(1)} a {match_d.group(2)}" if match_d else "DATA DESCONHECIDA"
         
         for page in pdf.pages:
-            # Substitui aspas e quebras de linha para evitar quebra na leitura do CSV
             texto_limpo = (page.extract_text() or "").replace('"', '').replace('\r', '')
             linhas = texto_limpo.split('\n')
             
             for linha in linhas:
+                # TRAVA DE SEGURANÇA 1: Ignora subtotais
+                if "TOTAL" in linha.upper() or "PÁGINA" in linha.upper():
+                    continue
+                    
                 try:
                     valores = re.findall(r'\d+,\d{2}', linha)
-                    # Se tem pelo menos 4 valores numéricos de moeda/quantidade, é um produto!
                     if len(valores) >= 4:
-                        ean_m = re.search(r'\b\d{8,14}\b', linha)
-                        
-                        # Isola a string removendo o EAN
-                        str_sem_ean = linha.replace(ean_m.group(), "") if ean_m else linha
-                        
-                        # O segredo: Corta a string exatamente onde começa a quantidade (ex: 1,00)
-                        partes = re.split(r'\s*\b\d+,\d{2}\b', str_sem_ean.strip())
+                        # TRAVA DE SEGURANÇA 2: Se não tem Código de Barras (EAN), não é produto!
+                        ean_m = re.search(r'\b\d{7,14}\b', linha)
+                        if not ean_m:
+                            continue
+                            
+                        # Limpeza do texto para pegar o nome do produto com precisão
+                        str_sem_ean = linha.replace(ean_m.group(), "").strip()
+                        partes = re.split(r'\s*\b\d+,\d{2}\b', str_sem_ean)
                         n_bruto = partes[0].strip()
                         
-                        # Remove a sigla da unidade (UN, PCT, CX) que fica grudada no final do nome
-                        n_bruto = re.sub(r'\s+(UN|KG|CX|PCT|L|ML|G|KIT|M|DZ|BD|FD|R\$|LT|LATA|GF)\b$', '', n_bruto, flags=re.IGNORECASE).strip()
+                        # Remove a sigla da embalagem do final (UN, PCT, CX, KG, etc)
+                        n_bruto = re.sub(r'\s+(UN|KG|CX|PCT|L|ML|G|KIT|M|DZ|BD|FD)\b$', '', n_bruto, flags=re.IGNORECASE).strip()
                         
                         nome_limpo = limpar_nome_produto(n_bruto)
-                        
-                        # O Total Bruto é sempre o antepenúltimo valor na lista de extração
+                        # Pega o 4º valor numérico de trás pra frente (Sempre o Total Bruto)
                         val = float(valores[-4].replace(',', '.'))
                         
                         dados.append({"Nome": nome_limpo, "Cat": palpite_categoria(nome_limpo), "Valor": val})
@@ -211,15 +217,12 @@ def processar_pdf(file):
 
 def gerar_html_interativo(df, periodo, total_geral):
     colunas_html = ""
-    # Pega apenas as categorias presentes nas nossas 5 regras
     categorias_presentes = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
     
     for i, cat in enumerate(categorias_presentes):
-        # Se por acaso a categoria não existir no relatório atual, o sum é zero (evita quebrar)
         paleta = CORES_CATEGORIAS.get(cat, {"bg": "#334155", "glow": "rgba(51, 65, 85, 0.2)"})
         itens_cat = df[df['Cat'] == cat]
         valor_cat = itens_cat['Valor'].sum()
-        
         cards_html = "".join([f'<div class="cyber-card"><div class="card-title">{row["Nome"]}</div><div class="card-value">R$ {row["Valor"]:,.2f}</div></div>' for _, row in itens_cat.iterrows()])
         colunas_html += f"""
         <div class="coluna-categoria">
@@ -289,7 +292,7 @@ credentials_dict = {"usernames": {}}
 for u, data in config_usuarios.items():
     credentials_dict["usernames"][u] = {"name": data["name"], "password": data["password"]}
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v21", "auth_key_v21", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v20", "auth_key_v20", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
