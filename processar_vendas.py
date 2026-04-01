@@ -11,16 +11,17 @@ import json
 import time
 
 # ==========================================
-# 1. CONFIGURAÇÕES VISUAIS E CSS (ENTERPRISE GLASSMORPHISM)
+# 1. CONFIGURAÇÕES VISUAIS E CSS (ENTERPRISE GLASSMORPHISM + UX)
 # ==========================================
 st.set_page_config(page_title="Canadá BI - Corporate", layout="wide")
 
 st.markdown("""
     <style>
+    /* REMOVE ESPAÇO MORTO NO TOPO DO STREAMLIT */
+    .block-container { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+    
     /* FUNDO RADIAL PREMIUM */
-    .stApp { 
-        background: radial-gradient(circle at top, #0f172a 0%, #020617 100%) !important; 
-    }
+    .stApp { background: radial-gradient(circle at top, #0f172a 0%, #020617 100%) !important; }
     .stApp > header { background-color: transparent !important; }
     
     [data-testid="stSidebar"] { 
@@ -44,7 +45,7 @@ st.markdown("""
         border-color: #38bdf8 !important; box-shadow: 0 0 10px rgba(56, 189, 248, 0.2) !important;
     }
     
-    /* UPLOADER ESTILO SAAS VERCEL */
+    /* UPLOADER ESTILO SAAS */
     [data-testid="stFileUploadDropzone"] { background-color: rgba(15, 23, 42, 0.4) !important; }
     [data-testid="stFileUploader"] {
         background-color: rgba(15, 23, 42, 0.4) !important; border-radius: 16px; padding: 20px;
@@ -76,11 +77,13 @@ st.markdown("""
     }
     .stButton > button:hover, .stDownloadButton > button:hover {
         background: rgba(56, 189, 248, 0.15) !important; border-color: #38bdf8 !important; color: #ffffff !important;
+        transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.2);
     }
 
-    /* COMPACTAÇÃO EXTREMA DA COLUNA DE CATEGORIAS */
+    /* COMPACTAÇÃO EXTREMA DA COLUNA DE CATEGORIAS (QUASE COLADAS) */
+    div[data-testid="column"]:nth-of-type(1) div[data-testid="stVerticalBlock"] { gap: 0rem !important; }
     div[data-testid="column"]:nth-of-type(1) div[data-testid="stHorizontalBlock"] {
-        gap: 0rem !important; align-items: center !important; margin-bottom: -22px !important;
+        gap: 0rem !important; align-items: center !important; margin-bottom: -28px !important;
     }
     
     /* BOTÕES DAS CATEGORIAS (FILTROS) */
@@ -92,8 +95,8 @@ st.markdown("""
     }
     .botao-categoria button:hover { color: #38bdf8 !important; transform: translateX(3px); }
 
-    /* CHECKBOXES ESTILIZADOS */
-    [data-testid="stCheckbox"] { padding-top: 5px !important; }
+    /* CHECKBOXES ESTILIZADOS E CENTRALIZADOS */
+    [data-testid="stCheckbox"] { padding-top: 2px !important; }
 
     /* SCROLLBAR MINIMALISTA */
     ::-webkit-scrollbar { width: 5px; }
@@ -101,7 +104,7 @@ st.markdown("""
     ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: rgba(56,189,248,0.5); }
 
-    /* ASSINATURA EM BADGE PREMIUM */
+    /* ASSINATURA EM BADGE PREMIUM (INTOCÁVEL) */
     .assinatura-master {
         position: fixed; bottom: 20px; left: 20px; background: rgba(2, 6, 23, 0.6); color: #64748b;
         padding: 8px 16px; border-radius: 30px; font-size: 10px; border: 1px solid rgba(255,255,255,0.05); 
@@ -123,7 +126,6 @@ st.markdown("""
 CONFIG_FILE = "usuarios_config.json"
 LOG_FILE = "log_atividades.csv"
 
-# CORES ATUALIZADAS (Tons mais elegantes e sóbrios para o HTML)
 CORES_CATEGORIAS = {
     "Tabacaria": {"bg": "rgba(30, 41, 59, 0.7)", "glow": "rgba(51, 65, 85, 0.4)", "border": "#475569"},
     "Bebidas": {"bg": "rgba(30, 58, 138, 0.6)", "glow": "rgba(37, 99, 235, 0.3)", "border": "#3b82f6"},
@@ -175,7 +177,7 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE (LÓGICA CONGELADA - 0 MUDANÇAS)
+# 3. FUNÇÕES CORE (CONGELADAS - INTOCÁVEIS)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -228,13 +230,9 @@ def processar_pdf(file):
                 except Exception as e: continue
     return dados, periodo
 
-# ==========================================
-# 5. NOVO HTML EXPORTADO (GLASSMORPHISM)
-# ==========================================
 def gerar_html_interativo(df, periodo, total_geral):
     colunas_html = ""
     categorias_presentes = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
-    
     for i, cat in enumerate(categorias_presentes):
         paleta = CORES_CATEGORIAS.get(cat, {"bg": "rgba(30, 41, 59, 0.7)", "glow": "rgba(51, 65, 85, 0.4)", "border": "#475569"})
         itens_cat = df[df['Cat'] == cat]
@@ -265,29 +263,23 @@ def gerar_html_interativo(df, periodo, total_geral):
             ::-webkit-scrollbar {{ width: 6px; }}
             ::-webkit-scrollbar-track {{ background: transparent; }}
             ::-webkit-scrollbar-thumb {{ background: rgba(255,255,255,0.1); border-radius: 10px; }}
-            
             .neon-bar {{ background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); padding: 30px; border-radius: 16px; text-align: center; margin-bottom: 40px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }}
             .neon-bar h3 {{ margin: 0; font-size: 13px; color: #94a3b8; letter-spacing: 2px; text-transform: uppercase; font-weight: 500; }}
             .neon-bar h1 {{ margin: 10px 0 0 0; font-size: 46px; font-weight: 900; background: linear-gradient(to right, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }}
-            
             .container-cols {{ display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; align-items: flex-start; }}
             .coluna-categoria {{ flex: 1; min-width: 240px; max-width: 320px; display: flex; flex-direction: column; }}
-            
             .accordion-header {{ padding: 15px 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border: 1px solid; backdrop-filter: blur(8px); position: relative; z-index: 10; transition: transform 0.3s ease; }}
             .accordion-header:hover {{ transform: translateY(-2px); }}
             .cat-check {{ width: 18px; height: 18px; cursor: pointer; margin-right: 12px; accent-color: var(--accent); }}
             .cat-title {{ font-size: 13px; font-weight: 700; color: white; letter-spacing: 0.5px; }}
             .cat-total {{ font-size: 14px; font-weight: 700; color: white; background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 6px; }}
-            
             .accordion-content {{ max-height: 0px; overflow-y: auto; transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1); background-color: rgba(2, 6, 23, 0.6); border-radius: 0 0 12px 12px; margin-top: -6px; backdrop-filter: blur(10px); }}
             .accordion-content.show {{ max-height: 450px; border: 1px solid rgba(255,255,255,0.05); border-top: none; }}
             .content-inner {{ padding: 15px 10px; display: flex; flex-direction: column; gap: 8px; }}
-            
             .cyber-card {{ background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border-left: 3px solid rgba(255,255,255,0.2); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.02); transition: all 0.2s; }}
             .cyber-card:hover {{ background: rgba(255,255,255,0.05); border-left-color: var(--accent); transform: translateX(2px); }}
             .card-title {{ font-size: 12px; color: #e2e8f0; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
             .card-value {{ font-size: 13px; font-weight: 700; color: #ffffff; }}
-            
             .assinatura-html {{ position: fixed; bottom: 20px; left: 20px; background: rgba(2, 6, 23, 0.8); color: #64748b; padding: 10px 20px; border-radius: 30px; font-size: 11px; border: 1px solid rgba(255,255,255,0.05); z-index: 9999; backdrop-filter: blur(12px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); text-transform: uppercase; letter-spacing: 0.5px; }}
             .assinatura-html span {{ color: #e0e7ff; font-weight: bold; }}
         </style>
@@ -316,7 +308,7 @@ credentials_dict = {"usernames": {}}
 for u, data in config_usuarios.items():
     credentials_dict["usernames"][u] = {"name": data["name"], "password": data["password"]}
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v22", "auth_key_v22", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v23", "auth_key_v23", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
@@ -328,12 +320,23 @@ if st.session_state.get("authentication_status"):
 
     st.sidebar.markdown(f"<h3 style='color:#ffffff; font-size:18px; font-weight:700; margin-bottom: 25px;'>Olá, {st.session_state['name']}</h3>", unsafe_allow_html=True)
     
+    # EFEITO ESMAECIDO E TOOLTIP PARA USUÁRIOS COMUNS (Gatilho de Vendas)
     if user_logado != 'madson':
         st.markdown("""
         <style>
+        div[role="radiogroup"] > label:nth-child(3),
+        div[role="radiogroup"] > label:nth-child(4) {
+            opacity: 0.3 !important; 
+            filter: grayscale(100%) !important;
+            cursor: not-allowed !important;
+        }
+        div[role="radiogroup"] > label:nth-child(3):hover,
+        div[role="radiogroup"] > label:nth-child(4):hover {
+            opacity: 0.8 !important; transform: none !important; box-shadow: none !important;
+        }
         div[role="radiogroup"] > label:nth-child(3):hover::after,
         div[role="radiogroup"] > label:nth-child(4):hover::after {
-            content: "Recurso Premium. Contate o Administrador.";
+            content: "Sem permissão para essa função, requer mudança de plano.";
             position: absolute; left: 102%; top: 5px; background: #e11d48; color: white;
             padding: 6px 12px; border-radius: 6px; font-size: 11px; white-space: nowrap; z-index: 99999; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
@@ -353,15 +356,15 @@ if st.session_state.get("authentication_status"):
 
     # --- PÁGINA 1: ANÁLISE DE RELATÓRIO ---
     if pagina == "Análise de Relatório":
-        st.markdown("<h2 style='color:#ffffff; font-size:26px; font-weight:800; margin-bottom: 10px; letter-spacing:-0.5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
-        trial_end = datetime.strptime(config_usuarios[user_logado]["trial_end"], "%Y-%m-%d").date()
         
+        trial_end = datetime.strptime(config_usuarios[user_logado]["trial_end"], "%Y-%m-%d").date()
         if date.today() > trial_end or (config_usuarios[user_logado]["quota"] <= 0 and user_logado != "madson"):
             st.error("Acesso Expirado ou Sem Cotas. Contate o Administrador.")
         else:
             if 'arquivo_carregado' not in st.session_state: st.session_state.arquivo_carregado = None
 
             if st.session_state.arquivo_carregado is None:
+                st.markdown("<h2 style='color:#ffffff; font-size:26px; font-weight:800; margin-top:-20px; letter-spacing:-0.5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
                 file = st.file_uploader("Selecionar Novo Relatório", type="pdf", key="single")
                 if file:
                     st.session_state.arquivo_carregado = file
@@ -375,28 +378,36 @@ if st.session_state.get("authentication_status"):
                 df = pd.DataFrame(dados)
                 total_bruto = df['Valor'].sum()
 
-                col_botoes, col_vazia = st.columns([2, 8])
-                with col_botoes:
+                # --- NOVO LAYOUT DO TOPO (Título, Info e Botões na mesma linha para otimizar espaço) ---
+                col_topo1, col_topo2, col_topo3 = st.columns([5, 2, 2.5])
+                with col_topo1:
+                    st.markdown("<h2 style='color:#ffffff; font-size:26px; font-weight:800; margin-top:-15px; margin-bottom:0px; letter-spacing:-0.5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='color:#64748b; font-size:12px; margin-top:5px; margin-bottom:0px;'>PERÍODO AUDITADO: <b style='color:#38bdf8;'>{per}</b></p>", unsafe_allow_html=True)
+                with col_topo2:
+                    st.markdown("<div style='margin-top:-5px;'>", unsafe_allow_html=True)
                     html_rel = gerar_html_interativo(df, per, total_bruto)
-                    st.download_button(label="📥 Salvar Relatório HTML", data=html_rel, file_name=f"BI_CANADA_{per.replace('/','-')}.html", mime="text/html", use_container_width=True)
+                    st.download_button(label="📥 Salvar HTML", data=html_rel, file_name=f"BI_CANADA_{per.replace('/','-')}.html", mime="text/html", use_container_width=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
+                with col_topo3:
+                    st.markdown("<div style='margin-top:-5px;'>", unsafe_allow_html=True)
                     if st.button("🗑️ Remover Relatório", use_container_width=True):
                         st.session_state.arquivo_carregado = None
                         st.session_state.cat_expandida = None
                         st.rerun()
+                    st.markdown("</div>", unsafe_allow_html=True)
 
-                st.markdown(f"<p style='color:#64748b; font-size:12px; margin-top:15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom:10px;'>PERÍODO AUDITADO: <b style='color:#e2e8f0;'>{per}</b></p>", unsafe_allow_html=True)
+                st.markdown("<hr style='border-color:rgba(255,255,255,0.05); margin-top:15px; margin-bottom:20px;'>", unsafe_allow_html=True)
                 
-                # Layout rebalanceado para dar o máximo de espaço aos Detalhes
+                # --- LAYOUT DE 3 COLUNAS ---
                 col_filtros, col_total, col_detalhes = st.columns([2.5, 3.5, 5], gap="large")
                 selecionadas = []
-                
                 categorias_pdf = sorted(df['Cat'].unique())
                 
                 with col_filtros:
                     st.markdown("<h4 style='color:#94a3b8; font-size:11px; margin-bottom:15px; text-transform:uppercase; letter-spacing:1px;'>Categorias</h4>", unsafe_allow_html=True)
                     for cat in categorias_pdf:
                         v = df[df['Cat'] == cat]['Valor'].sum() if not df.empty else 0
-                        c_chk, c_btn, c_val = st.columns([1, 5, 3.5])
+                        c_chk, c_btn, c_val = st.columns([1, 5, 4])
                         with c_chk:
                             if st.checkbox("", value=True, key=f"chk_{cat}"): selecionadas.append(cat)
                         with c_btn:
@@ -409,9 +420,14 @@ if st.session_state.get("authentication_status"):
                 with col_total:
                     st.markdown("<h4 style='color:#94a3b8; font-size:11px; margin-bottom:15px; text-transform:uppercase; letter-spacing:1px;'>Resumo Financeiro</h4>", unsafe_allow_html=True)
                     soma_f = df[df['Cat'].isin(selecionadas)]['Valor'].sum() if not df.empty else 0
-                    # Painel Glassmorphism com Gradiente Metálico no Texto
+                    
+                    # Painel Flutuante (Efeito Hover via CSS inline hack)
                     st.markdown(f'''
-                    <div style="background: rgba(30, 58, 138, 0.15); backdrop-filter: blur(10px); padding: 30px 20px; border-radius: 16px; text-align: center; border: 1px solid rgba(59, 130, 246, 0.3); box-shadow: 0 10px 30px -10px rgba(37, 99, 235, 0.2);">
+                    <style>
+                    .caixa-bruto {{ background: rgba(30, 58, 138, 0.15); backdrop-filter: blur(10px); padding: 30px 20px; border-radius: 16px; text-align: center; border: 1px solid rgba(59, 130, 246, 0.3); box-shadow: 0 10px 30px -10px rgba(37, 99, 235, 0.2); transition: all 0.3s ease; }}
+                    .caixa-bruto:hover {{ transform: translateY(-3px); box-shadow: 0 15px 30px -10px rgba(37, 99, 235, 0.4); border-color: #38bdf8; }}
+                    </style>
+                    <div class="caixa-bruto">
                         <p style="margin:0; color:#94a3b8; font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase;">Caixa Total Bruto</p>
                         <h1 style="margin:10px 0 0 0; font-size:32px; font-weight:900; background: linear-gradient(to right, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{formatar_moeda(soma_f)}</h1>
                     </div>
@@ -422,10 +438,17 @@ if st.session_state.get("authentication_status"):
                     if st.session_state.cat_expandida:
                         cat_atual = st.session_state.cat_expandida
                         itens = df[df['Cat'] == cat_atual]
-                        # Lista Ampliada (max-height: 450px) e Design Premium
-                        html_itens = f"<div style='background:rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px); padding:15px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>"
+                        
+                        st.markdown("""
+                        <style>
+                        .detalhe-panel { background:rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px); padding:15px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.3s ease; }
+                        .detalhe-panel:hover { box-shadow: 0 10px 20px rgba(0,0,0,0.2); border-left: 2px solid #38bdf8; }
+                        </style>
+                        """, unsafe_allow_html=True)
+                        
+                        html_itens = f"<div class='detalhe-panel'>"
                         html_itens += f"<h5 style='color:#e2e8f0; margin:0 0 12px 0; font-size:13px; font-weight:700; letter-spacing:0.5px;'>{cat_atual.upper()}</h5>"
-                        html_itens += "<div style='max-height: 450px; overflow-y: auto; padding-right:8px;'>"
+                        html_itens += "<div style='max-height: 400px; overflow-y: auto; padding-right:8px;'>"
                         for _, row in itens.iterrows():
                             html_itens += f"<div style='display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.03); padding:8px 0; transition: background 0.2s;' onmouseover=\"this.style.background='rgba(255,255,255,0.02)'\" onmouseout=\"this.style.background='transparent'\"><span style='color:#cbd5e1; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70%; font-weight:500;'>{row['Nome']}</span><span style='color:#ffffff; font-size:12px; font-weight:700;'>R$ {row['Valor']:,.2f}</span></div>"
                         html_itens += "</div></div>"
@@ -435,7 +458,7 @@ if st.session_state.get("authentication_status"):
 
     elif pagina == "Gerar Multiplos Relatorios":
         if not config_usuarios[user_logado]["batch_allowed"] and user_logado != "madson":
-            st.toast("🔒 Recurso Premium. Contate o Administrador.")
+            pass # O menu já mostra o tooltip, se ele clicar a tela fica vazia (ou mostre o alerta abaixo)
             st.warning("Acesso Restrito: Sua assinatura não contempla múltiplas gerações.")
         else:
             st.markdown("<h2 style='color:#ffffff; font-size:26px; font-weight:800; letter-spacing:-0.5px;'>Processamento em Lote</h2>", unsafe_allow_html=True)
@@ -451,7 +474,6 @@ if st.session_state.get("authentication_status"):
 
     elif pagina == "Historico de Atividades":
         if user_logado != "madson":
-            st.toast("🔒 Recurso Premium. Contate o Administrador.")
             st.warning("Acesso Restrito ao Administrador do Sistema.")
         else:
             st.markdown("<h2 style='color:#ffffff; font-size:26px; font-weight:800; letter-spacing:-0.5px;'>Histórico de Auditoria</h2>", unsafe_allow_html=True)
@@ -459,14 +481,12 @@ if st.session_state.get("authentication_status"):
 
     elif pagina == "Central de Permissões":
         if user_logado != "madson":
-            st.toast("🔒 Recurso Premium. Contate o Administrador.")
             st.warning("Acesso Restrito ao Administrador do Sistema.")
         else:
             st.markdown("<h2 style='color:#ffffff; font-size:26px; font-weight:800; margin-bottom: 20px; letter-spacing:-0.5px;'>Central de Permissões</h2>", unsafe_allow_html=True)
             
             c1, c2 = st.columns(2, gap="large")
             
-            # --- EDIÇÃO DE USUÁRIOS EXISTENTES ---
             with c1:
                 st.markdown("<div style='background:rgba(15, 23, 42, 0.6); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);'>", unsafe_allow_html=True)
                 st.markdown("<h4 style='color:#38bdf8; font-size:14px; text-transform:uppercase; margin-bottom:15px;'>Editar Acesso Existente</h4>", unsafe_allow_html=True)
@@ -491,7 +511,6 @@ if st.session_state.get("authentication_status"):
                             st.success("Dados atualizados instantaneamente!")
                 st.markdown("</div>", unsafe_allow_html=True)
             
-            # --- CRIAÇÃO DE NOVO USUÁRIO ---
             with c2:
                 st.markdown("<div style='background:rgba(15, 23, 42, 0.6); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);'>", unsafe_allow_html=True)
                 st.markdown("<h4 style='color:#10b981; font-size:14px; text-transform:uppercase; margin-bottom:15px;'>Criar Novo Cliente</h4>", unsafe_allow_html=True)
