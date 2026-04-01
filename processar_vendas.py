@@ -39,17 +39,17 @@ st.markdown("""
         background: #1e293b !important; border: 1px solid #334155 !important; border-radius: 6px;
         padding: 10px; margin-bottom: 8px; text-align: center; cursor: pointer;
         transition: all 0.3s ease; color: #cbd5e1 !important; font-weight: bold; width: 100%;
-        position: relative; /* Necessário para o Tooltip */
+        position: relative;
     }
     div[role="radiogroup"] > label:hover { background: #0f172a !important; border-color: #0ea5e9 !important; color: #0ea5e9 !important; transform: translateX(5px); }
     div[role="radiogroup"] > label[data-baseweb="radio"] > div:last-child { width: 100%; }
     
-    /* BOTÕES MENORES E DISCRETOS (Remover e Salvar) */
+    /* BOTÕES MENORES E DISCRETOS */
     .stButton > button, .stDownloadButton > button {
         padding: 2px 10px !important; font-size: 12px !important; min-height: 30px !important; border-radius: 6px !important;
     }
 
-    /* COMPACTAÇÃO DA COLUNA DE CATEGORIAS (Filtros mais juntos) */
+    /* COMPACTAÇÃO DA COLUNA DE CATEGORIAS */
     div[data-testid="column"]:nth-of-type(1) div[data-testid="stHorizontalBlock"] {
         gap: 0.1rem !important; align-items: center !important; margin-bottom: -15px !important;
     }
@@ -60,7 +60,7 @@ st.markdown("""
     }
     .botao-categoria button:hover { border-color: #0ea5e9 !important; color: #0ea5e9 !important; background-color: rgba(14, 165, 233, 0.1) !important; }
 
-    /* Scrollbar minimalista para o menu interno */
+    /* Scrollbar minimalista */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
@@ -81,12 +81,12 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. SISTEMA DE GERENCIAMENTO DE USUÁRIOS E SENHAS (JSON)
+# 2. SISTEMA DE GERENCIAMENTO (JSON) E MIGRAÇÃO
 # ==========================================
 CONFIG_FILE = "usuarios_config.json"
 LOG_FILE = "log_atividades.csv"
 
-# Agora o JSON guarda TUDO, inclusive as senhas!
+# Molde padrão de configurações com todas as chaves exigidas
 DEFAULT_CONFIG = {
     "madson": {"name": "Madson", "password": "084269", "batch_allowed": True, "quota": 999, "trial_end": "2099-12-31"},
     "joacildo": {"name": "Joacildo", "password": "canada2026", "batch_allowed": False, "quota": 10, "trial_end": "2026-12-31"},
@@ -94,14 +94,41 @@ DEFAULT_CONFIG = {
     "manoel": {"name": "Manoel", "password": "canada2026", "batch_allowed": False, "quota": 10, "trial_end": "2026-12-31"}
 }
 
-def carregar_configuracoes():
-    if not os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'w') as f: json.dump(DEFAULT_CONFIG, f)
-        return DEFAULT_CONFIG
-    with open(CONFIG_FILE, 'r') as f: return json.load(f)
-
 def salvar_configuracoes(config_data):
+    """Salva os dados no arquivo JSON."""
     with open(CONFIG_FILE, 'w') as f: json.dump(config_data, f)
+
+def carregar_configuracoes():
+    """Lê as configurações e repara dados ausentes (Migração)."""
+    # 1. Se o arquivo não existe, cria um novo a partir do molde.
+    if not os.path.exists(CONFIG_FILE):
+        salvar_configuracoes(DEFAULT_CONFIG)
+        return DEFAULT_CONFIG
+    
+    # 2. Se o arquivo existe, lê os dados.
+    with open(CONFIG_FILE, 'r') as f:
+        dados_salvos = json.load(f)
+        
+    # 3. MIGRACÃO AUTOMÁTICA: Compara os dados salvos com o molde padrão.
+    # Isso resolve o KeyError se o arquivo velho não tiver as senhas (password e name).
+    precisa_atualizar = False
+    for usuario, config_padrao in DEFAULT_CONFIG.items():
+        # Se um novo usuário foi adicionado ao molde, adicionamos ao arquivo
+        if usuario not in dados_salvos:
+            dados_salvos[usuario] = config_padrao
+            precisa_atualizar = True
+        else:
+            # Se faltar chaves (como 'password' ou 'name') num usuário existente, nós as injetamos
+            for chave, valor in config_padrao.items():
+                if chave not in dados_salvos[usuario]:
+                    dados_salvos[usuario][chave] = valor
+                    precisa_atualizar = True
+                    
+    # Salva o arquivo corrigido se houve alguma injeção de dados
+    if precisa_atualizar:
+        salvar_configuracoes(dados_salvos)
+        
+    return dados_salvos
 
 def consumir_cota(username, config_data):
     if username != "madson" and username in config_data:
@@ -188,12 +215,14 @@ def gerar_html_interativo(df, periodo, total_geral):
             .cyber-card {{ background: var(--bg-card); padding: 10px; border-radius: 4px; border-left: 3px solid var(--accent); display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155; }}
             .card-title {{ font-size: 11px; color: #cbd5e1; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
             .card-value {{ font-size: 12px; font-weight: bold; color: var(--accent); }}
+            .assinatura-html {{ position: fixed; bottom: 15px; left: 20px; background: rgba(15, 23, 42, 0.9); color: #94a3b8; padding: 8px 15px; border-radius: 20px; font-size: 11px; border: 1px solid #334155; z-index: 9999; }}
+            .assinatura-html span {{ color: #38bdf8; font-weight: bold; }}
         </style>
     </head>
     <body>
         <div class="neon-bar"><h3>CAIXA TOTAL SELECIONADO</h3><h1 id="display-total">R$ {total_geral:,.2f}</h1><p style="color:#94a3b8; font-size:11px; margin:0;">Período: {periodo}</p></div>
         <div class="container-cols">{colunas_html}</div>
-        <div style="position: fixed; bottom: 15px; left: 15px; background: rgba(15, 23, 42, 0.95); color: #94a3b8; padding: 8px 15px; border-radius: 20px; font-size: 10px; border: 1px solid #334155; z-index: 999999; backdrop-filter: blur(5px);">Desenvolvido por <span style="color: #38bdf8; font-weight: bold;">@madson_da_hora</span> / Analista e Programador</div>
+        <div class="assinatura-html">Desenvolvido por <span>@madson_da_hora</span> / Analista de dados e Programador</div>
         <script>
             function toggleAccordion(id) {{ document.getElementById(id).classList.toggle("show"); }}
             function recalcular() {{
@@ -205,36 +234,15 @@ def gerar_html_interativo(df, periodo, total_geral):
     </body>
     </html>"""
 
-def processar_pdf(file):
-    dados = []
-    file.seek(0)
-    with pdfplumber.open(file) as pdf:
-        txt_topo = (pdf.pages[0].extract_text() or "")
-        match_d = re.search(r'(\d{2}/\d{2}/\d{4})\s*[AÀaà]\s*(\d{2}/\d{2}/\d{4})', txt_topo)
-        periodo = f"{match_d.group(1)} a {match_d.group(2)}" if match_d else "DATA DESCONHECIDA"
-        for page in pdf.pages:
-            linhas = (page.extract_text() or "").split('\n')
-            for linha in linhas:
-                try:
-                    valores = re.findall(r'\d+,\d{2}', linha)
-                    if len(valores) >= 4:
-                        ean_m = re.search(r'\b\d{8,14}\b', linha)
-                        nome_m = re.search(r'(.+?)\s+(?:UN|KG)\s+\d+,\d{2}', linha)
-                        n_bruto = nome_m.group(1).replace(ean_m.group() if ean_m else "", "").strip()
-                        nome_limpo = limpar_nome_produto(n_bruto)
-                        val = float(valores[-4].replace(',', '.'))
-                        dados.append({"Nome": nome_limpo, "Cat": palpite_categoria(nome_limpo), "Valor": val})
-                except: continue
-    return dados, periodo
-
 # ==========================================
 # 4. SEGURANÇA E LOGIN DINÂMICO
 # ==========================================
+# Carrega os dados migrados com segurança
 config_usuarios = carregar_configuracoes()
 
-# Construindo as credenciais dinamicamente a partir do JSON (para as senhas poderem ser trocadas)
 credentials_dict = {"usernames": {}}
 for u, data in config_usuarios.items():
+    # Isso impede o KeyError, pois carregar_configuracoes agora garante que essas chaves existem!
     credentials_dict["usernames"][u] = {"name": data["name"], "password": data["password"]}
 
 authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v19", "auth_key_v19", expiry_days=30)
@@ -249,11 +257,10 @@ if st.session_state.get("authentication_status"):
 
     st.sidebar.markdown(f"<h3 style='color:#f8fafc; font-size:16px; margin-bottom: 20px;'>Usuário: {st.session_state['name']}</h3>", unsafe_allow_html=True)
     
-    # --- EFEITO DE MENU BLOQUEADO PARA NÃO-ADMINS ---
+    # Efeito Visual de Paywall nos menus restritos
     if user_logado != 'madson':
         st.markdown("""
         <style>
-        /* Etiqueta flutuante quando o usuário passa o mouse nos itens 3 e 4 */
         div[role="radiogroup"] > label:nth-child(3):hover::after,
         div[role="radiogroup"] > label:nth-child(4):hover::after {
             content: "Sem permissão para essa função, requer mudança de plano.";
@@ -263,7 +270,6 @@ if st.session_state.get("authentication_status"):
         </style>
         """, unsafe_allow_html=True)
 
-    # O Menu mostra TUDO para todo mundo
     opcoes_menu = ["Análise de Relatório", "Gerar Multiplos Relatorios", "Historico de Atividades", "Central de Permissões"]
     pagina = st.sidebar.radio("Navegação", opcoes_menu, label_visibility="collapsed")
     st.sidebar.markdown("---")
@@ -276,12 +282,12 @@ if st.session_state.get("authentication_status"):
 
     authenticator.logout("Encerrar Sessao", "sidebar")
 
-    # --- PÁGINA 1: ANÁLISE DE RELATÓRIO ---
+    # --- PÁGINAS DO SISTEMA ---
     if pagina == "Análise de Relatório":
         st.markdown("<h2 style='color:white; font-size:22px; margin-bottom: 5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
         trial_end = datetime.strptime(config_usuarios[user_logado]["trial_end"], "%Y-%m-%d").date()
         
-        if date.today() > trial_end or config_usuarios[user_logado]["quota"] <= 0:
+        if date.today() > trial_end or config_usuarios[user_logado]["quota"] <= 0 and user_logado != "madson":
             st.error("Acesso Expirado ou Sem Cotas. Contate o Administrador.")
         else:
             if 'arquivo_carregado' not in st.session_state: st.session_state.arquivo_carregado = None
@@ -300,7 +306,6 @@ if st.session_state.get("authentication_status"):
                 df = pd.DataFrame(dados)
                 total_bruto = df['Valor'].sum()
 
-                # BOTÕES MENORES E EMPILHADOS À ESQUERDA (Liberam a visão)
                 col_botoes, col_vazia = st.columns([2, 8])
                 with col_botoes:
                     html_rel = gerar_html_interativo(df, per, total_bruto)
@@ -312,9 +317,7 @@ if st.session_state.get("authentication_status"):
 
                 st.markdown(f"<p style='color:#94a3b8; font-size:12px; margin-top:10px; border-bottom: 1px solid #1e293b; padding-bottom:10px;'>Período Analisado: <b style='color:white;'>{per}</b></p>", unsafe_allow_html=True)
                 
-                # --- LAYOUT DE 3 COLUNAS ---
                 col_filtros, col_total, col_detalhes = st.columns([3, 3, 4], gap="large")
-                
                 selecionadas = []
                 categorias = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
                 
@@ -322,7 +325,6 @@ if st.session_state.get("authentication_status"):
                     st.markdown("<h4 style='color:#94a3b8; font-size:12px; margin-bottom:10px; text-transform:uppercase;'>Categorias</h4>", unsafe_allow_html=True)
                     for cat in categorias:
                         v = df[df['Cat'] == cat]['Valor'].sum()
-                        
                         c_chk, c_btn, c_val = st.columns([1, 5, 3])
                         with c_chk:
                             if st.checkbox("", value=True, key=f"chk_{cat}"): selecionadas.append(cat)
@@ -348,8 +350,6 @@ if st.session_state.get("authentication_status"):
                     if st.session_state.cat_expandida:
                         cat_atual = st.session_state.cat_expandida
                         itens = df[df['Cat'] == cat_atual]
-                        
-                        # Lista de Itens bem pequena para economizar tela
                         html_itens = f"<div style='background:#1e293b; padding:10px; border-radius:6px; border-left:2px solid #0ea5e9; border-top:1px solid #334155; border-right:1px solid #334155; border-bottom:1px solid #334155;'>"
                         html_itens += f"<h5 style='color:white; margin:0 0 8px 0; font-size:11px; letter-spacing:1px;'>{cat_atual.upper()}</h5>"
                         html_itens += "<div style='max-height: 250px; overflow-y: auto; padding-right:5px;'>"
@@ -360,7 +360,6 @@ if st.session_state.get("authentication_status"):
                     else:
                         st.markdown("""<div style="background:#1e293b; padding:15px; border-radius:6px; text-align:center; border: 1px dashed #334155;"><p style="color:#94a3b8; font-size:11px; margin:0;">👈 Clique na categoria para inspecionar</p></div>""", unsafe_allow_html=True)
 
-    # --- PÁGINAS PROTEGIDAS PELO PAYWALL (Múltiplos, Histórico, Permissões) ---
     elif pagina == "Gerar Multiplos Relatorios":
         if not config_usuarios[user_logado]["batch_allowed"] and user_logado != "madson":
             st.toast("🔒 Sem permissão para essa função, requer mudança de plano.")
@@ -398,10 +397,7 @@ if st.session_state.get("authentication_status"):
                 dados_usr = config_usuarios[usr_selecionado]
                 with st.form("form_admin"):
                     st.markdown(f"<h4 style='color:#38bdf8; font-size:16px;'>Editando: {usr_selecionado.capitalize()}</h4>", unsafe_allow_html=True)
-                    
-                    # NOVIDADE: Campo para atualizar a senha
                     nova_senha = st.text_input("Senha de Acesso do Usuário", value=dados_usr["password"])
-                    
                     novo_batch = st.checkbox("Habilitar 'Gerar Múltiplos Relatórios'", value=dados_usr["batch_allowed"])
                     nova_cota = st.number_input("Cota Restante de Uploads", min_value=0, value=dados_usr["quota"], step=1)
                     data_atual = datetime.strptime(dados_usr["trial_end"], "%Y-%m-%d").date()
