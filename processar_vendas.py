@@ -61,12 +61,12 @@ st.markdown("""
     [data-testid="stFileUploaderDropzoneInstructions"] { display: none; }
     small { display: none !important; }
     
-    /* MENU LATERAL MAGNÉTICO */
+    /* MENU LATERAL MAGNÉTICO (Ajustado para caber mais itens) */
     div[role="radiogroup"] > label > div:first-of-type { display: none; }
     div[role="radiogroup"] > label {
         background: rgba(255,255,255,0.03) !important; border: 1px solid rgba(255,255,255,0.05) !important; 
-        border-radius: 8px; padding: 10px 15px; margin-bottom: 8px; text-align: left; cursor: pointer;
-        transition: all 0.3s ease; color: #94a3b8 !important; font-weight: 500; width: 100%; position: relative;
+        border-radius: 8px; padding: 8px 12px; margin-bottom: 5px; text-align: left; cursor: pointer;
+        transition: all 0.3s ease; color: #94a3b8 !important; font-weight: 500; font-size: 13px !important; width: 100%; position: relative;
     }
     div[role="radiogroup"] > label:hover, div[role="radiogroup"] > label[data-baseweb="radio"]:has(input:checked) { 
         background: rgba(56, 189, 248, 0.1) !important; border-color: rgba(56, 189, 248, 0.3) !important; 
@@ -85,22 +85,22 @@ st.markdown("""
         transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.2);
     }
 
-    /* COMPACTAÇÃO EXTREMA DA COLUNA DE CATEGORIAS */
+    /* COMPACTAÇÃO EXTREMA DA COLUNA DE CATEGORIAS (QUASE COLADAS) */
     div[data-testid="column"]:nth-of-type(1) div[data-testid="stHorizontalBlock"] {
         gap: 0rem !important; align-items: center !important; margin-bottom: -18px !important;
     }
     
-    /* BOTÕES DAS CATEGORIAS (FILTROS) */
+    /* BOTÕES DAS CATEGORIAS (FILTROS) - Proibido quebrar linha */
     .botao-categoria button {
         background-color: transparent !important; border: none !important; color: #94a3b8 !important;
         justify-content: flex-start !important; padding: 0px 5px !important; font-weight: 700 !important;
         font-size: 12px !important; box-shadow: none !important; min-height: 20px !important;
-        transition: all 0.3s ease !important;
+        transition: all 0.3s ease !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;
     }
     .botao-categoria button:hover { color: #38bdf8 !important; transform: translateX(3px); }
 
     /* CHECKBOXES ESTILIZADOS */
-    [data-testid="stCheckbox"] { padding-top: 5px !important; }
+    [data-testid="stCheckbox"] { padding-top: 4px !important; }
 
     /* SCROLLBAR MINIMALISTA */
     ::-webkit-scrollbar { width: 5px; }
@@ -181,7 +181,7 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE (INTOCÁVEIS)
+# 3. FUNÇÕES CORE (CONGELADAS - INTOCÁVEIS)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -324,15 +324,23 @@ credentials_dict = {"usernames": {}}
 for u, data in config_usuarios.items():
     credentials_dict["usernames"][u] = {"name": data["name"], "password": data["password"]}
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v28", "auth_key_v28", expiry_days=30)
-
-# --- LOGÓTIPO NO ECRÃ DE LOGIN ---
+# --- PROTEÇÃO DE PROPORÇÃO PARA O LOGIN (Notebooks vs TVs) ---
 if not st.session_state.get("authentication_status"):
+    st.markdown("""
+        <style>
+        .block-container { 
+            max-width: 450px !important; 
+            padding-top: 10vh !important; 
+        }
+        </style>
+        """, unsafe_allow_html=True)
+    
     if os.path.exists("logo.png"):
-        col1, col2, col3 = st.columns([1.5, 1, 1.5])
+        col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.image("logo.png", use_container_width=True)
 
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v29", "auth_key_v29", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
@@ -342,12 +350,14 @@ if st.session_state.get("authentication_status"):
     if 'cat_expandida' not in st.session_state:
         st.session_state.cat_expandida = None
 
-    # --- LOGÓTIPO NO MENU LATERAL ---
+    # --- LOGÓTIPO NO MENU LATERAL (Ajustado e Menor) ---
     if os.path.exists("logo.png"):
-        st.sidebar.image("logo.png", use_container_width=True)
+        c1, c2, c3 = st.sidebar.columns([1, 3, 1])
+        with c2:
+            st.image("logo.png", use_container_width=True)
         st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
-    st.sidebar.markdown(f"<h3 style='color:#ffffff; font-size:18px; font-weight:700; margin-bottom: 25px;'>Olá, {st.session_state['name']}</h3>", unsafe_allow_html=True)
+    st.sidebar.markdown(f"<h3 style='color:#ffffff; font-size:16px; font-weight:700; margin-bottom: 15px;'>Olá, {st.session_state['name']}</h3>", unsafe_allow_html=True)
     
     css_bloqueio = ""
     if user_logado != 'madson':
@@ -431,7 +441,8 @@ if st.session_state.get("authentication_status"):
 
                 st.markdown("<hr style='border-color:rgba(255,255,255,0.05); margin-top:15px; margin-bottom:20px;'>", unsafe_allow_html=True)
                 
-                col_filtros, col_total, col_detalhes = st.columns([2.5, 3.5, 5], gap="large")
+                # Rebalanceamento das colunas (Dando mais espaço à primeira coluna para evitar quebras)
+                col_filtros, col_total, col_detalhes = st.columns([2.8, 3.2, 5], gap="large")
                 selecionadas = []
                 categorias_pdf = sorted(df['Cat'].unique())
                 
@@ -439,7 +450,7 @@ if st.session_state.get("authentication_status"):
                     st.markdown("<h4 style='color:#94a3b8; font-size:11px; margin-bottom:15px; text-transform:uppercase; letter-spacing:1px;'>Categorias</h4>", unsafe_allow_html=True)
                     for cat in categorias_pdf:
                         v = df[df['Cat'] == cat]['Valor'].sum() if not df.empty else 0
-                        c_chk, c_btn, c_val = st.columns([1, 5, 4])
+                        c_chk, c_btn, c_val = st.columns([1, 5.5, 4.5])
                         with c_chk:
                             if st.checkbox("", value=True, key=f"chk_{cat}"): selecionadas.append(cat)
                         with c_btn:
@@ -447,7 +458,8 @@ if st.session_state.get("authentication_status"):
                             if st.button(cat, key=f"btn_{cat}", use_container_width=True): st.session_state.cat_expandida = cat
                             st.markdown('</div>', unsafe_allow_html=True)
                         with c_val:
-                            st.markdown(f"<div style='padding-top:4px; color:#ffffff; font-weight:700; font-size:13px; text-align:right;'>{formatar_moeda(v)}</div>", unsafe_allow_html=True)
+                            # Adicionado white-space: nowrap para o valor NUNCA quebrar de linha
+                            st.markdown(f"<div style='padding-top:4px; color:#ffffff; font-weight:700; font-size:13px; text-align:right; white-space:nowrap;'>{formatar_moeda(v)}</div>", unsafe_allow_html=True)
 
                 with col_total:
                     st.markdown("<h4 style='color:#94a3b8; font-size:11px; margin-bottom:15px; text-transform:uppercase; letter-spacing:1px;'>Resumo Financeiro</h4>", unsafe_allow_html=True)
@@ -460,7 +472,7 @@ if st.session_state.get("authentication_status"):
                     </style>
                     <div class="caixa-bruto">
                         <p style="margin:0; color:#94a3b8; font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase;">Caixa Total Bruto</p>
-                        <h1 style="margin:10px 0 0 0; font-size:32px; font-weight:900; background: linear-gradient(to right, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{formatar_moeda(soma_f)}</h1>
+                        <h1 style="margin:10px 0 0 0; font-size:32px; font-weight:900; background: linear-gradient(to right, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; white-space:nowrap;">{formatar_moeda(soma_f)}</h1>
                     </div>
                     ''', unsafe_allow_html=True)
 
@@ -481,7 +493,7 @@ if st.session_state.get("authentication_status"):
                         html_itens += f"<h5 style='color:#e2e8f0; margin:0 0 12px 0; font-size:13px; font-weight:700; letter-spacing:0.5px;'>{cat_atual.upper()}</h5>"
                         html_itens += "<div style='max-height: 400px; overflow-y: auto; padding-right:8px;'>"
                         for _, row in itens.iterrows():
-                            html_itens += f"<div style='display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.03); padding:8px 0; transition: background 0.2s;' onmouseover=\"this.style.background='rgba(255,255,255,0.02)'\" onmouseout=\"this.style.background='transparent'\"><span style='color:#cbd5e1; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70%; font-weight:500;'>{row['Nome']}</span><span style='color:#ffffff; font-size:12px; font-weight:700;'>R$ {row['Valor']:,.2f}</span></div>"
+                            html_itens += f"<div style='display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.03); padding:8px 0; transition: background 0.2s;' onmouseover=\"this.style.background='rgba(255,255,255,0.02)'\" onmouseout=\"this.style.background='transparent'\"><span style='color:#cbd5e1; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70%; font-weight:500;'>{row['Nome']}</span><span style='color:#ffffff; font-size:12px; font-weight:700; white-space:nowrap;'>R$ {row['Valor']:,.2f}</span></div>"
                         html_itens += "</div></div>"
                         st.markdown(html_itens, unsafe_allow_html=True)
                     else:
