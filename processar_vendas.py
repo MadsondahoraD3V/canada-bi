@@ -34,7 +34,7 @@ st.markdown("""
         backdrop-filter: blur(12px) !important;
     }
     
-    /* TIPOGRAFIA FLUIDA RESPONSIVA (Adapta à tela automaticamente) */
+    /* TIPOGRAFIA FLUIDA RESPONSIVA */
     .stTextInput label p, .stPasswordInput label p, .stSelectbox label p, .stNumberInput label p, .stDateInput label p { 
         color: #e2e8f0 !important; font-weight: 600 !important; 
         font-size: clamp(11px, 1vw, 13px) !important; 
@@ -140,15 +140,17 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. SISTEMA DE GERENCIAMENTO (JSON)
+# 2. SISTEMA DE GERENCIAMENTO (JSON E CORES)
 # ==========================================
 CONFIG_FILE = "usuarios_config.json"
 LOG_FILE = "log_atividades.csv"
 
+# AS 6 CATEGORIAS OFICIAIS COM SUAS CORES
 CORES_CATEGORIAS = {
     "Tabacaria": {"bg": "rgba(30, 41, 59, 0.7)", "glow": "rgba(51, 65, 85, 0.4)", "border": "#475569"},
     "Bebidas Alcoólicas": {"bg": "rgba(30, 58, 138, 0.6)", "glow": "rgba(37, 99, 235, 0.3)", "border": "#3b82f6"},
     "Bomboniere": {"bg": "rgba(13, 148, 136, 0.6)", "glow": "rgba(20, 184, 166, 0.3)", "border": "#14b8a6"},
+    "Sorvetes": {"bg": "rgba(219, 39, 119, 0.6)", "glow": "rgba(190, 24, 93, 0.3)", "border": "#db2777"},
     "Remédios": {"bg": "rgba(190, 18, 60, 0.6)", "glow": "rgba(225, 29, 72, 0.3)", "border": "#e11d48"},
     "Mercearia": {"bg": "rgba(3, 105, 161, 0.6)", "glow": "rgba(2, 132, 199, 0.3)", "border": "#0284c7"}
 }
@@ -196,7 +198,7 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE (MOTOR TREINADO E AFIADO)
+# 3. FUNÇÕES CORE (6 CATEGORIAS OFICIAIS)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -214,26 +216,28 @@ def limpar_nome_produto(nome_bruto):
 
 def palpite_categoria(nome):
     """
-    Motor treinado com o Dataset Mestre + Auditorias Constantes da Canadá BI.
+    Motor treinado com o Dataset Mestre + Sorvetes.
     """
     txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
     
-    # 1. EXCEÇÕES BLINDADAS (Previnem falsos positivos - como a Cenoura não ir pro Remédio)
-    if any(k in txt for k in ["BATATA DOCE", "ITALAKINHO", "DOCE DE LEITE", "ERVADOCE", "ERVA DOCE", "MARAGOGI DOCE", "SHAMPOO", "CONDICIONADOR", "CREME SEDA", "KIT SEDA", "CENOURA"]): 
+    # 1. EXCEÇÕES BLINDADAS (Previnem falsos positivos)
+    if any(k in txt for k in ["BATATA DOCE", "ITALAKINHO", "DOCE DE LEITE", "ERVADOCE", "ERVA DOCE", "MARAGOGI DOCE", "SHAMPOO", "CONDICIONADOR", "CREME SEDA", "KIT SEDA", "CENOURA", "CANETA BIC"]): 
         return "Mercearia", False
         
-    # 2. REGRAS GERAIS DE 4 CATEGORIAS PRINCIPAIS
-    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG", "GUDANG", "EIGHT", "VILA RICA", "ISQUEIRO", "BIC ", "FOSFORO", "MAXIMILIAM", "NISE"]): 
+    # 2. REGRAS GERAIS DE 5 CATEGORIAS PRINCIPAIS
+    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG", "GUDANG", "EIGHT", "VILA RICA", "ISQUEIRO", "BIC ", "FOSFORO", "MAXIMILIAM", "NISE", "CARTEIRA", "SMOKING", "LANDUS", "ENGLISHMAN", "MARSHAL"]): 
         return "Tabacaria", False
         
-    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA", "IMPERIO", "BEATS", "SPATEN", "CABARE", "CONHAQUE", "DREHER", "DEVASSA", "CACHACA", "CARANGUEJO", "CARANGUEIJO"]): 
+    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA", "IMPERIO", "BEATS", "SPATEN", "CABARE", "CONHAQUE", "DREHER", "DEVASSA", "CACHACA", "CARANGUEJO", "CARANGUEIJO", "BLACK PRINCESS", "PETRA", "GIN "]): 
         return "Bebidas Alcoólicas", False
         
-    # ATENÇÃO: Todos os salgadinhos, pipocas e wafers caem na Bomboniere antes de chegarem à Mercearia
-    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA", "ICEKISS", "MENTOS", "CHICLE", "EMBARE", "FREEGELLS", "GOMETS", "BATOM", "SERENATA", "KITKAT", "CHOKREM", "OLHINHO", "PIRULITO", "PESCOCO DE GIRAFA", "DOCINHO", "PIPOCA", "PIPPOS", "TRELOSO", "KRO", "SALGADINHO", "SALG", "WAFER", "WAFFER", "TORRESMINHO", "BOKUS", "CREMOSIN", "PICOLE", "SORV"]): 
+    if any(k in txt for k in ["SORV", "PICOLE", "CREMOSIN", "DADA", "PIC ", "PIC STER", "SUNDAE", "KONE", "SKIMO", "GELAT", "STERBINHO", "ACAI"]):
+        return "Sorvetes", False
+        
+    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "PACOCA", "MOLEQUE", "BALA", "ICEKISS", "MENTOS", "CHICLE", "EMBARE", "FREEGELLS", "GOMETS", "BATOM", "SERENATA", "KITKAT", "CHOKREM", "OLHINHO", "PIRULITO", "PESCOCO DE GIRAFA", "DOCINHO", "PIPOCA", "PIPPOS", "TRELOSO", "KRO", "SALGADINHO", "SALG", "WAFER", "WAFFER", "TORRESMINHO", "BOKUS", "BIG-BIG", "BIG BIG", "CLISS", "HAPPY BOL"]): 
         return "Bomboniere", False
         
-    if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO", "PARACETAMOL", "CIMEGRIPE", "NEOSALDINA", "NIMESULIDA", "NEOLEFRIN"]): 
+    if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO", "PARACETAMOL", "CIMEGRIPE", "NEOSALDINA", "NIMESULIDA", "NEOLEFRIN", "DICLOFENACO"]): 
         return "Remédios", False
 
     # 3. MERCEARIA EXPLÍCITA (Garante que os itens fiquem na matemática correta e limpa o Fallback)
@@ -254,10 +258,11 @@ def palpite_categoria(nome):
         "PRESTOBARBA", "GILLETTE", "PROBAK", "HERBISSIMO", "COTONETE", "ALGODAO", "GAS ", "CARVAO", "GELO", "PILHA", "RAIOVAC",
         "VASSOURA", "VELA", "MUCILON", "CREMOGEMA", "CHIMICHURRI", "COMINHO", "OREGANO", "LOURO", "PIMENTA",
         "BISC ", "PANETONE", "TORRADA", "SASSAMI", "FILE", "MOELA", "CORACAO", "BACON", "PRESUNTO", "FIAMBRE",
-        "BOLDO", "TEMPERO", "DETERGENTE", "DETERG ", "ACAI", "PIC ", "PIC STER",
+        "BOLDO", "TEMPERO", "DETERGENTE", "DETERG ", 
         "INFINITY", "POLPA", "FEIJAO", "DUETO", "TAMPICO", "OSSINHO", "PINCA", "PINÇAS", "COCOROTE", "LARANJA", "ACAFRAO", 
         "DEL VALLE", "ULTRA COLA", "MORTADELA", "ASA ", "TODYNHO", "TODDY", "CAMOMILA", "FRALDA", "FERMENTO", "RAPADURA", "GALINHA",
-        "SEMPRE LIVRE", "CALABRESA", "VINAGRE", "SKINKA", "REMOVEDOR", "ESMALTE", "H2O", "MARACUJA", "ABACATE", "SODA", "COCO", "SUPER SIGMA", "CREAM CRACKER"
+        "SEMPRE LIVRE", "CALABRESA", "VINAGRE", "SKINKA", "REMOVEDOR", "ESMALTE", "H2O", "MARACUJA", "ABACATE", "SODA", "COCO", "SUPER SIGMA", "CREAM CRACKER",
+        "ENERGY", "MAGNETO", "ALCOOL", "BEB FRUIT", "BEB FRUT", "BICARBONATO", "BORRACHA", "ADIFLOR", "POWERADE", "ROLLON", "AVON", "MUSK", "SUKINHO", "VALE PRESENTE", "WHISKAS", "ITI "
     ]
     if any(k in txt for k in mercearia_explicita):
         return "Mercearia", False
@@ -298,7 +303,8 @@ def processar_pdf(file):
 
 def gerar_html_interativo(df, periodo, total_geral, nome_arquivo):
     colunas_html = ""
-    categorias_presentes = ["Tabacaria", "Bebidas Alcoólicas", "Bomboniere", "Remédios", "Mercearia"]
+    # ADICIONADA A CATEGORIA SORVETES AQUI NO HTML
+    categorias_presentes = ["Tabacaria", "Bebidas Alcoólicas", "Bomboniere", "Sorvetes", "Remédios", "Mercearia"]
     for i, cat in enumerate(categorias_presentes):
         paleta = CORES_CATEGORIAS.get(cat, {"bg": "rgba(30, 41, 59, 0.7)", "glow": "rgba(51, 65, 85, 0.4)", "border": "#475569"})
         itens_cat = df[df['Cat'] == cat]
@@ -390,7 +396,7 @@ if not st.session_state.get("authentication_status"):
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2: st.image("logo.png", use_container_width=True)
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v46", "auth_key_v46", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v48", "auth_key_v48", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
