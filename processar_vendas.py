@@ -5,11 +5,13 @@ import re
 import pandas as pd
 import unicodedata
 from decimal import Decimal
+from datetime import datetime
+import os
 
 # ==========================================
 # 1. CONFIGURAÇÕES VISUAIS E CSS
 # ==========================================
-st.set_page_config(page_title="Canadá BI - Pro", layout="wide")
+st.set_page_config(page_title="Canadá BI - Admin Edition", layout="wide")
 
 st.markdown("""
     <style>
@@ -34,10 +36,45 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. FUNÇÕES CORE
+# 2. FUNÇÕES CORE E EXPORTAÇÃO
 # ==========================================
+LOG_FILE = "log_atividades.csv"
+
+def registrar_log(usuario, arquivo, periodo):
+    agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    novo_log = pd.DataFrame([{"Data/Hora": agora, "Usuário": usuario, "Arquivo": arquivo, "Período": periodo}])
+    if not os.path.isfile(LOG_FILE):
+        novo_log.to_csv(LOG_FILE, index=False, sep=';', encoding='utf-8-sig')
+    else:
+        novo_log.to_csv(LOG_FILE, mode='a', header=False, index=False, sep=';', encoding='utf-8-sig')
+    
+    # NOTA BONITINHA (POP-UP)
+    st.toast('✅ Registro de relatório salvo', icon='📄')
+
 def formatar_moeda(valor):
     return f"R$ {float(valor):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+def gerar_html_bonitao(dados_df, periodo, total_geral):
+    itens_html = ""
+    for _, row in dados_df.iterrows():
+        itens_html += f"""
+        <div style="background:#1e293b; padding:10px; border-radius:8px; margin-bottom:5px; border-left:4px solid #38bdf8;">
+            <span style="color:#94a3b8; font-size:12px;">{row['Cat']}</span><br>
+            <b style="color:white;">{row['Nome']}</b><br>
+            <span style="color:#10b981; font-weight:bold;">{formatar_moeda(row['Valor'])}</span>
+        </div>"""
+
+    return f"""
+    <div style="background-color:#020617; color:white; font-family:sans-serif; padding:30px;">
+        <h1 style="color:#38bdf8; border-bottom:1px solid #334155;">Dashboards Canadá BI</h1>
+        <p>Período das Vendas: <b>{periodo}</b></p>
+        <h2 style="color:#10b981;">TOTAL DO PERÍODO: {formatar_moeda(total_geral)}</h2>
+        <hr style="border:0; border-top:1px solid #334155;">
+        <h3>Detalhamento de Itens:</h3>
+        {itens_html}
+        <p style="margin-top:40px; color:#475569; font-size:12px;">Gerado por @Madson_da_hora</p>
+    </div>
+    """
 
 def limpar_nome_produto(nome_bruto):
     nome = re.sub(r'\b\d{5,8}\b', '', nome_bruto) 
@@ -70,12 +107,12 @@ def processar_pdf(file):
                         n_bruto = nome_m.group(1).replace(ean_m.group() if ean_m else "", "").strip()
                         nome_limpo = limpar_nome_produto(n_bruto)
                         val = float(valores[-4].replace(',', '.'))
-                        dados.append({"Nome": nome_limpo, "Cat": palpite_categoria(nome_limpo), "Valor": val, "Periodo": periodo})
+                        dados.append({"Nome": nome_limpo, "Cat": palpite_categoria(nome_limpo), "Valor": val})
                 except: continue
     return dados, periodo
 
 # ==========================================
-# 3. SEGURANÇA (LOGINS SOLICITADOS)
+# 3. SEGURANÇA E NAVEGAÇÃO
 # ==========================================
 credentials = {
     "usernames": {
@@ -86,44 +123,49 @@ credentials = {
     }
 }
 
-# Chave de cookie com pelo menos 32 caracteres para evitar avisos de segurança
-authenticator = stauth.Authenticate(credentials, "canada_bi_cookie_secure_key_32_chars", "secret_key_123456", expiry_days=30)
-
-# CORREÇÃO: Chamada simples da função login
+authenticator = stauth.Authenticate(credentials, "canada_bi_cookie_v7", "secret_key_v7", expiry_days=30)
 authenticator.login(location='main')
 
-# Verificação via session_state
 if st.session_state.get("authentication_status"):
     st.sidebar.title(f"👤 {st.session_state['name']}")
-    pagina = st.sidebar.radio("Navegação", ["📊 Painel Individual", "🚀 Upload em Lote"])
+    
+    opcoes_menu = ["📊 Painel Individual", "🚀 Upload em Lote"]
+    if st.session_state['username'] == 'madson':
+        opcoes_menu.append("📜 Histórico")
+    
+    pagina = st.sidebar.radio("Navegação", opcoes_menu)
     authenticator.logout("Sair", "sidebar")
 
-    # --- PÁGINA INDIVIDUAL ---
+    # --- PÁGINA 1 ---
     if pagina == "📊 Painel Individual":
         st.title("📊 Análise Individual")
-        
-        if 'arquivo_carregado' not in st.session_state:
-            st.session_state.arquivo_carregado = None
+        if 'arquivo_carregado' not in st.session_state: st.session_state.arquivo_carregado = None
 
         if st.session_state.arquivo_carregado is None:
             file = st.file_uploader("Arraste um PDF", type="pdf", key="single")
             if file:
                 st.session_state.arquivo_carregado = file
+                dados, per = processar_pdf(file)
+                registrar_log(st.session_state['name'], file.name, per)
                 st.rerun()
         else:
             file = st.session_state.arquivo_carregado
-            c_btn1, c_btn2 = st.columns([1, 5])
-            with c_btn1:
-                if st.button("🗑️ Remover PDF"):
-                    st.session_state.arquivo_carregado = None
-                    st.rerun()
-            with c_btn2:
-                st.download_button(label="📥 Baixar PDF Original", data=file, file_name=file.name, mime="application/pdf")
-
             dados, per = processar_pdf(file)
             df = pd.DataFrame(dados)
-            st.info(f"📅 Período: {per} | Arquivo: {file.name}")
-            
+            total_bruto = df['Valor'].sum()
+
+            c1, c2, c3 = st.columns([1, 2, 2])
+            with c1:
+                if st.button("🗑️ Remover"):
+                    st.session_state.arquivo_carregado = None
+                    st.rerun()
+            with c2:
+                html_rel = gerar_html_bonitao(df, per, total_bruto)
+                st.download_button(label="🌐 Baixar Relatório HTML", data=html_rel, file_name=f"RELATORIO DE {per.replace('/', '-')}.html", mime="text/html")
+            with c3:
+                st.download_button(label="📥 Baixar PDF Original", data=file, file_name=file.name, mime="application/pdf")
+
+            # Dashboard Cards e Soma Flutuante...
             cats = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
             cols = st.columns(len(cats))
             selecionadas = []
@@ -136,27 +178,28 @@ if st.session_state.get("authentication_status"):
             soma_f = df[df['Cat'].isin(selecionadas)]['Valor'].sum()
             st.markdown(f'<div class="floating-sum">SELECIONADO<br>{formatar_moeda(soma_f)}</div>', unsafe_allow_html=True)
 
-    # --- PÁGINA EM LOTE ---
-    else:
+    # --- PÁGINA 2 ---
+    elif pagina == "🚀 Upload em Lote":
         st.title("🚀 Processamento em Lote")
         batch_files = st.file_uploader("Upload em Lote (Máx 7)", type="pdf", accept_multiple_files=True)
         if batch_files:
-            if len(batch_files) > 7: st.error("Máximo 7 arquivos.")
+            if len(batch_files) > 7: st.error("Máximo 7.")
             else:
-                progress = st.progress(0)
-                resultados = []
-                for i, f in enumerate(batch_files):
-                    progress.progress((i + 1) / len(batch_files))
+                for f in batch_files:
                     try:
                         dados, per = processar_pdf(f)
-                        resultados.append({"arquivo": f.name, "status": "✅ Sucesso", "total": sum(d['Valor'] for d in dados)})
-                    except:
-                        resultados.append({"arquivo": f.name, "status": "❌ Erro", "total": 0})
-                st.table(pd.DataFrame(resultados))
+                        registrar_log(st.session_state['name'], f.name, per)
+                    except: continue
+                st.success("Arquivos processados e logs registrados!")
 
-    st.markdown('<div class="footer">Canadá BI v6.4 | Madson da Hora Analyst</div>', unsafe_allow_html=True)
+    # --- PÁGINA 3 ---
+    elif pagina == "📜 Histórico":
+        st.title("📜 Histórico de Auditoria")
+        if os.path.exists(LOG_FILE):
+            df_logs = pd.read_csv(LOG_FILE, sep=';')
+            st.dataframe(df_logs.sort_index(ascending=False), use_container_width=True)
+
+    st.markdown('<div class="footer">Canadá BI v7.5 | Madson da Hora Analyst</div>', unsafe_allow_html=True)
 
 elif st.session_state.get("authentication_status") is False:
     st.error("Login ou Senha incorretos.")
-elif st.session_state.get("authentication_status") is None:
-    st.warning("Por favor, insira suas credenciais.")
