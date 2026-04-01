@@ -11,18 +11,25 @@ import json
 import time
 
 # ==========================================
-# 1. CONFIGURAÇÕES VISUAIS E CSS (ENTERPRISE UX)
+# 1. CONFIGURAÇÕES VISUAIS E CSS (ENTERPRISE UX + ANTI-FORK)
 # ==========================================
 st.set_page_config(page_title="Canadá BI - Corporate", layout="wide")
 
 st.markdown("""
     <style>
-    /* REMOVE ESPAÇO MORTO NO TOPO DO STREAMLIT (Aproveitamento de Tela) */
+    /* =========================================
+       BLINDAGEM ANTI-FORK (OCULTA O TOPO)
+       Isso remove o botão do GitHub, o Menu e o Deploy
+       ========================================= */
+    header { visibility: hidden !important; display: none !important; }
+    [data-testid="stHeader"] { display: none !important; }
+    #MainMenu { visibility: hidden !important; display: none !important; }
+
+    /* REMOVE ESPAÇO MORTO NO TOPO DO STREAMLIT */
     .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
     
     /* FUNDO RADIAL PREMIUM */
     .stApp { background: radial-gradient(circle at top, #0f172a 0%, #020617 100%) !important; }
-    .stApp > header { background-color: transparent !important; }
     
     [data-testid="stSidebar"] { 
         background-color: rgba(2, 6, 23, 0.7) !important; 
@@ -175,7 +182,7 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE (Ajuste na inteligência de Categorização)
+# 3. FUNÇÕES CORE (CONGELADAS - INTOCÁVEIS)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -194,11 +201,9 @@ def limpar_nome_produto(nome_bruto):
 def palpite_categoria(nome):
     txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
     
-    # EXCEÇÕES BLINDADAS (Protegem os itens de caírem nas regras gerais abaixo)
     if any(k in txt for k in ["BATATA DOCE", "ITALAKINHO", "DOCE DE LEITE", "ERVADOCE", "ERVA DOCE"]): 
         return "Mercearia"
         
-    # AS 5 CATEGORIAS OFICIAIS
     if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG", "GUDANG"]): 
         return "Tabacaria"
     if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA"]): 
@@ -237,7 +242,10 @@ def processar_pdf(file):
                 except Exception as e: continue
     return dados, periodo
 
-def gerar_html_interativo(df, periodo, total_geral):
+# ==========================================
+# 5. NOVO HTML EXPORTADO (COM NOME DO ARQUIVO)
+# ==========================================
+def gerar_html_interativo(df, periodo, total_geral, nome_arquivo):
     colunas_html = ""
     categorias_presentes = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
     for i, cat in enumerate(categorias_presentes):
@@ -292,7 +300,12 @@ def gerar_html_interativo(df, periodo, total_geral):
         </style>
     </head>
     <body>
-        <div class="neon-bar"><h3>Caixa Total Selecionado</h3><h1 id="display-total">R$ {total_geral:,.2f}</h1><p style="color:#64748b; font-size:12px; margin-top:8px;">Período Auditado: {periodo}</p></div>
+        <div class="neon-bar">
+            <h3>Caixa Total Selecionado</h3>
+            <h1 id="display-total">R$ {total_geral:,.2f}</h1>
+            <p style="color:#64748b; font-size:12px; margin-top:8px; margin-bottom:0px;">Período Auditado: {periodo}</p>
+            <p style="color:#475569; font-size:10px; margin-top:2px;">Arquivo Origem: {nome_arquivo}</p>
+        </div>
         <div class="container-cols">{colunas_html}</div>
         <div class="assinatura-html">Desenvolvido por <span>@madson_da_hora</span></div>
         <script>
@@ -315,7 +328,7 @@ credentials_dict = {"usernames": {}}
 for u, data in config_usuarios.items():
     credentials_dict["usernames"][u] = {"name": data["name"], "password": data["password"]}
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v25", "auth_key_v25", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v26", "auth_key_v26", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
@@ -327,6 +340,7 @@ if st.session_state.get("authentication_status"):
 
     st.sidebar.markdown(f"<h3 style='color:#ffffff; font-size:18px; font-weight:700; margin-bottom: 25px;'>Olá, {st.session_state['name']}</h3>", unsafe_allow_html=True)
     
+    # EFEITO ESMAECIDO E TOOLTIP PARA USUÁRIOS COMUNS
     css_bloqueio = ""
     if user_logado != 'madson':
         css_bloqueio += """
@@ -393,9 +407,10 @@ if st.session_state.get("authentication_status"):
                 with col_topo1:
                     st.markdown("<h2 style='color:#ffffff; font-size:26px; font-weight:800; margin-top:-10px; margin-bottom:0px; letter-spacing:-0.5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
                     st.markdown(f"<p style='color:#64748b; font-size:12px; margin-top:5px; margin-bottom:0px; text-transform:uppercase; letter-spacing:1px;'>Período Auditado: <b style='color:#38bdf8;'>{per}</b></p>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='color:#475569; font-size:10px; margin-top:0px; margin-bottom:0px;'>Arquivo origem: <i>{file.name}</i></p>", unsafe_allow_html=True)
                 with col_topo2:
                     st.markdown("<div style='margin-top:0px;'>", unsafe_allow_html=True)
-                    html_rel = gerar_html_interativo(df, per, total_bruto)
+                    html_rel = gerar_html_interativo(df, per, total_bruto, file.name)
                     nome_arquivo_html = f"RELATORIO DE {per.replace('/', '-').replace(' a ', '_a_')}.html"
                     st.download_button(label="📥 Salvar Relatório Atual", data=html_rel, file_name=nome_arquivo_html, mime="text/html", use_container_width=True)
                     st.markdown("</div>", unsafe_allow_html=True)
