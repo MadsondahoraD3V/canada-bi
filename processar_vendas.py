@@ -34,7 +34,7 @@ st.markdown("""
         backdrop-filter: blur(12px) !important;
     }
     
-    /* TIPOGRAFIA FLUIDA RESPONSIVA */
+    /* TIPOGRAFIA FLUIDA RESPONSIVA (Adapta à tela automaticamente) */
     .stTextInput label p, .stPasswordInput label p, .stSelectbox label p, .stNumberInput label p, .stDateInput label p { 
         color: #e2e8f0 !important; font-weight: 600 !important; 
         font-size: clamp(11px, 1vw, 13px) !important; 
@@ -198,7 +198,7 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE (6 CATEGORIAS OFICIAIS)
+# 3. FUNÇÕES CORE (MOTOR BLINDADO ANTI-CHOQUES)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -216,12 +216,20 @@ def limpar_nome_produto(nome_bruto):
 
 def palpite_categoria(nome):
     """
-    Motor treinado com o Dataset Mestre + Sorvetes.
+    Motor treinado e Blindado contra choques de substrings
     """
     txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
     
-    # 1. EXCEÇÕES BLINDADAS (Previnem falsos positivos)
-    if any(k in txt for k in ["BATATA DOCE", "ITALAKINHO", "DOCE DE LEITE", "ERVADOCE", "ERVA DOCE", "MARAGOGI DOCE", "SHAMPOO", "CONDICIONADOR", "CREME SEDA", "KIT SEDA", "CENOURA", "CANETA BIC"]): 
+    # 1. EXCEÇÕES BLINDADAS ANTI-CHOQUE (Previnem as "pegadinhas" do idioma)
+    excecoes_choque = [
+        "BATATA DOCE", "ITALAKINHO", "DOCE DE LEITE", "ERVADOCE", "ERVA DOCE", "MARAGOGI DOCE", 
+        "SHAMPOO", "CONDICIONADOR", "CREME SEDA", "KIT SEDA", "CENOURA", "CANETA BIC",
+        "ABSORVENTE", "INFINITY", "EMBALAGEM", "BALANCA", "BALANÇA", "FERMENTO", "ALIMENTO", 
+        "CONDIMENTO", "PIMENTO", "PEQUENO", "MENOS", "MORENO", "VENENO", "FENO", "PLENO", 
+        "SERENO", "TERRENO", "CAMPINEIRO", "DEFINITIVO", "AFINIDADE", "SEDAN", "CIDADAO",
+        "CIDADÃO", "GELATINA", "MACRO", "MICRO", "SAL GROSSO", "SALGROSSO"
+    ]
+    if any(k in txt for k in excecoes_choque): 
         return "Mercearia", False
         
     # 2. REGRAS GERAIS DE 5 CATEGORIAS PRINCIPAIS
@@ -249,7 +257,7 @@ def palpite_categoria(nome):
         "CREME", "EMPANADO", "CEBOLA", "GOMA", "FRANGO", "COXA", "HAMBURGUER", "MILHO",
         "AGUA SANIT", "SAL ", "BOTIJAO", "MOLHO", "MACAXEIRA", "BISTECA", "BRILHOTEX",
         "LIMPOL", "SABONETE", "REXONA", "AMACIANTE", "CALDO", "FLOCAO", "FLOKAO", "MAIZENA",
-        "ESPONJA", "ESP ", "ACUCAR", "ABSORVENTE", "COLORAL", "FIGADO", "DANONE", "PEITO",
+        "ESPONJA", "ESP ", "ACUCAR", "COLORAL", "FIGADO", "DANONE", "PEITO",
         "DUMEL", "NATVILLE", "TOMATE", "LIMAO", "ROSQUINHA", "AGUA OXIGENADA", "HASTES", "COTTON",
         "AGUA SCHIN", "KAPO", "REFRESCO", "AGUA MINERAL", "COCA", "AGUA DE COCO", "REFRIGERANTE", "DORE", "CC ORIG", "GUARANA",
         "FANTA", "SPRITE", "PEPSI", "ENERGETICO", "MONSTER", "RED BULL", "TANG", "FRISCO", "MID", "SUKITA", "KUAT", "FYS",
@@ -259,7 +267,7 @@ def palpite_categoria(nome):
         "VASSOURA", "VELA", "MUCILON", "CREMOGEMA", "CHIMICHURRI", "COMINHO", "OREGANO", "LOURO", "PIMENTA",
         "BISC ", "PANETONE", "TORRADA", "SASSAMI", "FILE", "MOELA", "CORACAO", "BACON", "PRESUNTO", "FIAMBRE",
         "BOLDO", "TEMPERO", "DETERGENTE", "DETERG ", 
-        "INFINITY", "POLPA", "FEIJAO", "DUETO", "TAMPICO", "OSSINHO", "PINCA", "PINÇAS", "COCOROTE", "LARANJA", "ACAFRAO", 
+        "POLPA", "FEIJAO", "DUETO", "TAMPICO", "OSSINHO", "PINCA", "PINÇAS", "COCOROTE", "LARANJA", "ACAFRAO", 
         "DEL VALLE", "ULTRA COLA", "MORTADELA", "ASA ", "TODYNHO", "TODDY", "CAMOMILA", "FRALDA", "FERMENTO", "RAPADURA", "GALINHA",
         "SEMPRE LIVRE", "CALABRESA", "VINAGRE", "SKINKA", "REMOVEDOR", "ESMALTE", "H2O", "MARACUJA", "ABACATE", "SODA", "COCO", "SUPER SIGMA", "CREAM CRACKER",
         "ENERGY", "MAGNETO", "ALCOOL", "BEB FRUIT", "BEB FRUT", "BICARBONATO", "BORRACHA", "ADIFLOR", "POWERADE", "ROLLON", "AVON", "MUSK", "SUKINHO", "VALE PRESENTE", "WHISKAS", "ITI "
@@ -303,7 +311,6 @@ def processar_pdf(file):
 
 def gerar_html_interativo(df, periodo, total_geral, nome_arquivo):
     colunas_html = ""
-    # ADICIONADA A CATEGORIA SORVETES AQUI NO HTML
     categorias_presentes = ["Tabacaria", "Bebidas Alcoólicas", "Bomboniere", "Sorvetes", "Remédios", "Mercearia"]
     for i, cat in enumerate(categorias_presentes):
         paleta = CORES_CATEGORIAS.get(cat, {"bg": "rgba(30, 41, 59, 0.7)", "glow": "rgba(51, 65, 85, 0.4)", "border": "#475569"})
@@ -396,7 +403,7 @@ if not st.session_state.get("authentication_status"):
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2: st.image("logo.png", use_container_width=True)
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v48", "auth_key_v48", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v49", "auth_key_v49", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
