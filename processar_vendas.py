@@ -175,7 +175,7 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE (CONGELADAS - INTOCÁVEIS)
+# 3. FUNÇÕES CORE (Ajuste na inteligência de Categorização)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -193,12 +193,21 @@ def limpar_nome_produto(nome_bruto):
 
 def palpite_categoria(nome):
     txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
-    if "BATATA DOCE" in txt: return "Mercearia"
-    if "ITALAKINHO" in txt: return "Mercearia"
-    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG", "GUDANG"]): return "Tabacaria"
-    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA"]): return "Bebidas"
-    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA"]): return "Bomboniere"
-    if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO"]): return "Remédios"
+    
+    # EXCEÇÕES BLINDADAS (Protegem os itens de caírem nas regras gerais abaixo)
+    if any(k in txt for k in ["BATATA DOCE", "ITALAKINHO", "DOCE DE LEITE", "ERVADOCE", "ERVA DOCE"]): 
+        return "Mercearia"
+        
+    # AS 5 CATEGORIAS OFICIAIS
+    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG", "GUDANG"]): 
+        return "Tabacaria"
+    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA"]): 
+        return "Bebidas"
+    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA"]): 
+        return "Bomboniere"
+    if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO"]): 
+        return "Remédios"
+        
     return "Mercearia"
 
 def processar_pdf(file):
@@ -306,7 +315,7 @@ credentials_dict = {"usernames": {}}
 for u, data in config_usuarios.items():
     credentials_dict["usernames"][u] = {"name": data["name"], "password": data["password"]}
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v24", "auth_key_v24", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v25", "auth_key_v25", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
@@ -318,7 +327,6 @@ if st.session_state.get("authentication_status"):
 
     st.sidebar.markdown(f"<h3 style='color:#ffffff; font-size:18px; font-weight:700; margin-bottom: 25px;'>Olá, {st.session_state['name']}</h3>", unsafe_allow_html=True)
     
-    # EFEITO ESMAECIDO E TOOLTIP PARA USUÁRIOS COMUNS
     css_bloqueio = ""
     if user_logado != 'madson':
         css_bloqueio += """
@@ -333,7 +341,6 @@ if st.session_state.get("authentication_status"):
             padding: 5px 0; border-radius: 6px; font-size: 10px; text-align: center; z-index: 99999; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
         """
-        # Dim/Esmaecer também o botão de "Lote" se o usuário não tiver permissão
         if not config_usuarios.get(user_logado, {}).get("batch_allowed", False):
             css_bloqueio += """
             div[role="radiogroup"] > label:nth-child(2) {
@@ -382,7 +389,6 @@ if st.session_state.get("authentication_status"):
                 df = pd.DataFrame(dados)
                 total_bruto = df['Valor'].sum()
 
-                # --- NOVO LAYOUT DO TOPO (Espaço 100% Otimizado) ---
                 col_topo1, col_topo2, col_topo3 = st.columns([5, 2.5, 2.5])
                 with col_topo1:
                     st.markdown("<h2 style='color:#ffffff; font-size:26px; font-weight:800; margin-top:-10px; margin-bottom:0px; letter-spacing:-0.5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
@@ -390,13 +396,11 @@ if st.session_state.get("authentication_status"):
                 with col_topo2:
                     st.markdown("<div style='margin-top:0px;'>", unsafe_allow_html=True)
                     html_rel = gerar_html_interativo(df, per, total_bruto)
-                    # O nome do arquivo gerado usará a variável do período dinamicamente
                     nome_arquivo_html = f"RELATORIO DE {per.replace('/', '-').replace(' a ', '_a_')}.html"
                     st.download_button(label="📥 Salvar Relatório Atual", data=html_rel, file_name=nome_arquivo_html, mime="text/html", use_container_width=True)
                     st.markdown("</div>", unsafe_allow_html=True)
                 with col_topo3:
                     st.markdown("<div style='margin-top:0px;'>", unsafe_allow_html=True)
-                    # Botão para Novo Upload limpa os dados e recarrega a página instantaneamente
                     if st.button("🔄 Novo Upload", use_container_width=True):
                         st.session_state.arquivo_carregado = None
                         st.session_state.cat_expandida = None
@@ -405,7 +409,6 @@ if st.session_state.get("authentication_status"):
 
                 st.markdown("<hr style='border-color:rgba(255,255,255,0.05); margin-top:15px; margin-bottom:20px;'>", unsafe_allow_html=True)
                 
-                # --- LAYOUT DE 3 COLUNAS ---
                 col_filtros, col_total, col_detalhes = st.columns([2.5, 3.5, 5], gap="large")
                 selecionadas = []
                 categorias_pdf = sorted(df['Cat'].unique())
@@ -422,7 +425,6 @@ if st.session_state.get("authentication_status"):
                             if st.button(cat, key=f"btn_{cat}", use_container_width=True): st.session_state.cat_expandida = cat
                             st.markdown('</div>', unsafe_allow_html=True)
                         with c_val:
-                            # Ajuste fino de alinhamento do valor em relação ao botão
                             st.markdown(f"<div style='padding-top:4px; color:#ffffff; font-weight:700; font-size:13px; text-align:right;'>{formatar_moeda(v)}</div>", unsafe_allow_html=True)
 
                 with col_total:
@@ -465,7 +467,7 @@ if st.session_state.get("authentication_status"):
 
     elif pagina == "Gerar Multiplos Relatorios":
         if not config_usuarios[user_logado]["batch_allowed"] and user_logado != "madson":
-            pass # Tooltip já funciona no CSS, apenas bloqueia a tela.
+            pass
         else:
             st.markdown("<h2 style='color:#ffffff; font-size:26px; font-weight:800; letter-spacing:-0.5px; margin-top:-10px;'>Processamento em Lote</h2>", unsafe_allow_html=True)
             batch_files = st.file_uploader("Selecionar Novos Relatórios", type="pdf", accept_multiple_files=True)
