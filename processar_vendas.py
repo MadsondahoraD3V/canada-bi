@@ -11,21 +11,19 @@ import json
 import time
 
 # ==========================================
-# 1. CONFIGURAÇÕES VISUAIS E CSS (ESCALA -30% + ANTI-FORK)
+# 1. CONFIGURAÇÕES VISUAIS E CSS (ENTERPRISE UX + FLUID DESIGN)
 # ==========================================
 st.set_page_config(page_title="Canadá BI - Corporate", layout="wide")
 
 st.markdown("""
     <style>
     /* =========================================
-       BLINDAGEM ANTI-FORK (OCULTA O TOPO)
+       BLINDAGEM ANTI-FORK E AJUSTE DE TELA
        ========================================= */
     header { visibility: hidden !important; display: none !important; }
     [data-testid="stHeader"] { display: none !important; }
     #MainMenu { visibility: hidden !important; display: none !important; }
-
-    /* REMOVE ESPAÇO MORTO NO TOPO DO STREAMLIT */
-    .block-container { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+    .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; max-width: 98% !important; }
     
     /* FUNDO RADIAL PREMIUM */
     .stApp { background: radial-gradient(circle at top, #0f172a 0%, #020617 100%) !important; }
@@ -36,16 +34,18 @@ st.markdown("""
         backdrop-filter: blur(12px) !important;
     }
     
-    /* TEXTOS REDUZIDOS EM 30% */
+    /* TIPOGRAFIA FLUIDA RESPONSIVA (Adapta à tela automaticamente) */
     .stTextInput label p, .stPasswordInput label p, .stSelectbox label p, .stNumberInput label p, .stDateInput label p { 
-        color: #e2e8f0 !important; font-weight: 600 !important; font-size: 10px !important; letter-spacing: 0.5px;
+        color: #e2e8f0 !important; font-weight: 600 !important; 
+        font-size: clamp(11px, 1vw, 13px) !important; 
+        letter-spacing: 0.5px;
     }
     
     /* INPUTS SOFISTICADOS */
     .stTextInput input, .stPasswordInput input {
         background-color: rgba(15, 23, 42, 0.6) !important; color: #ffffff !important; 
-        border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 6px !important;
-        font-size: 11px !important; padding: 6px 10px !important; min-height: 30px !important;
+        border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 8px !important;
+        font-size: clamp(12px, 1vw, 14px) !important; padding: 8px 12px !important; min-height: 35px !important;
     }
     .stTextInput input:focus, .stPasswordInput input:focus {
         border-color: #38bdf8 !important; box-shadow: 0 0 10px rgba(56, 189, 248, 0.2) !important;
@@ -54,7 +54,7 @@ st.markdown("""
     /* UPLOADER ESTILO SAAS */
     [data-testid="stFileUploadDropzone"] { background-color: rgba(15, 23, 42, 0.4) !important; }
     [data-testid="stFileUploader"] {
-        background-color: rgba(15, 23, 42, 0.4) !important; border-radius: 12px; padding: 15px;
+        background-color: rgba(15, 23, 42, 0.4) !important; border-radius: 12px; padding: 20px;
         border: 1px dashed rgba(56, 189, 248, 0.4) !important; backdrop-filter: blur(8px);
         transition: all 0.3s ease;
     }
@@ -62,13 +62,13 @@ st.markdown("""
     [data-testid="stFileUploaderDropzoneInstructions"] { display: none; }
     small { display: none !important; }
     
-    /* MENU LATERAL MAGNÉTICO (-30%) */
+    /* MENU LATERAL MAGNÉTICO (FLUIDO) */
     div[role="radiogroup"] > label > div:first-of-type { display: none; }
     div[role="radiogroup"] > label {
         background: rgba(255,255,255,0.03) !important; border: 1px solid rgba(255,255,255,0.05) !important; 
-        border-radius: 6px; padding: 6px 10px; margin-bottom: 4px; text-align: left; cursor: pointer;
+        border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; text-align: left; cursor: pointer;
         transition: all 0.3s ease; color: #94a3b8 !important; font-weight: 600; width: 100%; position: relative;
-        font-size: 10px !important;
+        font-size: clamp(11px, 1vw, 13px) !important;
     }
     div[role="radiogroup"] > label:hover, div[role="radiogroup"] > label[data-baseweb="radio"]:has(input:checked) { 
         background: rgba(56, 189, 248, 0.1) !important; border-color: rgba(56, 189, 248, 0.3) !important; 
@@ -76,11 +76,12 @@ st.markdown("""
     }
     div[role="radiogroup"] > label[data-baseweb="radio"] > div:last-child { width: 100%; }
     
-    /* BOTÕES MENORES E DISCRETOS (-30%) */
+    /* BOTÕES TOP DISCRETOS (FLUIDO) */
     .stButton > button, .stDownloadButton > button {
-        padding: 2px 10px !important; font-size: 10px !important; font-weight: 700 !important; min-height: 28px !important; 
-        border-radius: 6px !important; border: 1px solid rgba(255,255,255,0.1) !important;
+        padding: 4px 12px !important; font-size: clamp(11px, 1vw, 13px) !important; font-weight: 700 !important; min-height: 32px !important; 
+        border-radius: 8px !important; border: 1px solid rgba(255,255,255,0.1) !important;
         background: rgba(15, 23, 42, 0.8) !important; color: #e2e8f0 !important; transition: all 0.3s ease;
+        white-space: nowrap !important;
     }
     .stButton > button:hover, .stDownloadButton > button:hover {
         background: rgba(56, 189, 248, 0.15) !important; border-color: #38bdf8 !important; color: #ffffff !important;
@@ -92,22 +93,24 @@ st.markdown("""
         gap: 0rem !important; align-items: center !important; margin-bottom: -15px !important;
     }
     
-    /* BOTÕES DAS CATEGORIAS (FILTROS) E TRAVA DE QUEBRA DE LINHA (-30%) */
+    /* MÁGICA ANTI-QUEBRA DE LINHA NAS CATEGORIAS */
     .botao-categoria button {
         background-color: transparent !important; border: none !important; color: #94a3b8 !important;
-        justify-content: flex-start !important; padding: 0px !important; font-weight: 700 !important;
-        box-shadow: none !important; min-height: 16px !important;
-        transition: all 0.3s ease !important;
+        justify-content: flex-start !important; padding: 0px 4px !important; font-weight: 700 !important;
+        box-shadow: none !important; min-height: 20px !important;
+        transition: all 0.3s ease !important; width: 100% !important;
     }
     .botao-categoria button:hover { color: #38bdf8 !important; transform: translateX(3px); }
     .botao-categoria button div, .botao-categoria button p {
-        white-space: nowrap !important;
-        font-size: 10px !important; /* REDUZIDO PARA EVITAR QUEBRAS */
-        overflow: visible !important;
+        white-space: nowrap !important; 
+        font-size: clamp(10px, 1.1vw, 13px) !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important; /* Coloca '...' se a tela for hiper pequena */
+        text-align: left !important;
     }
 
     /* CHECKBOXES ESTILIZADOS */
-    [data-testid="stCheckbox"] { padding-top: 2px !important; }
+    [data-testid="stCheckbox"] { padding-top: 4px !important; }
 
     /* SCROLLBAR MINIMALISTA */
     ::-webkit-scrollbar { width: 5px; }
@@ -118,7 +121,7 @@ st.markdown("""
     /* ASSINATURA EM BADGE PREMIUM */
     .assinatura-master {
         position: fixed; bottom: 15px; left: 15px; background: rgba(2, 6, 23, 0.6); color: #64748b;
-        padding: 6px 12px; border-radius: 30px; font-size: 9px; border: 1px solid rgba(255,255,255,0.05); 
+        padding: 6px 12px; border-radius: 30px; font-size: 10px; border: 1px solid rgba(255,255,255,0.05); 
         z-index: 999999; backdrop-filter: blur(10px); pointer-events: none; white-space: nowrap;
         box-shadow: 0 4px 6px rgba(0,0,0,0.3); text-transform: uppercase; letter-spacing: 0.5px;
     }
@@ -323,6 +326,7 @@ credentials_dict = {"usernames": {}}
 for u, data in config_usuarios.items():
     credentials_dict["usernames"][u] = {"name": data["name"], "password": data["password"]}
 
+# --- LOGIN EM BLOCO PEQUENO CENTRALIZADO ---
 if not st.session_state.get("authentication_status"):
     st.markdown("""
         <style>
@@ -331,10 +335,10 @@ if not st.session_state.get("authentication_status"):
         """, unsafe_allow_html=True)
     
     if os.path.exists("logo.png"):
-        col1, col2, col3 = st.columns([1, 2, 1])
+        col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2: st.image("logo.png", use_container_width=True)
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v33", "auth_key_v33", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v34", "auth_key_v34", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
@@ -345,12 +349,11 @@ if st.session_state.get("authentication_status"):
         st.session_state.cat_expandida = None
 
     if os.path.exists("logo.png"):
-        # Logo mantida no tamanho original requisitado
         c1, c2, c3 = st.sidebar.columns([1, 1.5, 1])
         with c2: st.image("logo.png", use_container_width=True)
         st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
-    st.sidebar.markdown(f"<h3 style='color:#ffffff; font-size:14px; font-weight:700; margin-bottom: 12px;'>Olá, {st.session_state['name']}</h3>", unsafe_allow_html=True)
+    st.sidebar.markdown(f"<h3 style='color:#ffffff; font-size:clamp(12px, 1.2vw, 15px); font-weight:700; margin-bottom: 12px;'>Olá, {st.session_state['name']}</h3>", unsafe_allow_html=True)
     
     css_bloqueio = ""
     if user_logado != 'madson':
@@ -363,7 +366,7 @@ if st.session_state.get("authentication_status"):
         div[role="radiogroup"] > label:nth-child(4):hover::after {
             content: "Recurso Premium. Contate o Administrador.";
             position: absolute; top: 100%; left: 0%; width: 100%; background: #e11d48; color: white;
-            padding: 5px 0; border-radius: 6px; font-size: 9px; text-align: center; z-index: 99999; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            padding: 5px 0; border-radius: 6px; font-size: 10px; text-align: center; z-index: 99999; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
         """
         if not config_usuarios.get(user_logado, {}).get("batch_allowed", False):
@@ -372,9 +375,9 @@ if st.session_state.get("authentication_status"):
                 opacity: 0.3 !important; filter: grayscale(100%) !important; cursor: not-allowed !important; pointer-events: auto !important;
             }
             div[role="radiogroup"] > label:nth-child(2):hover::after {
-                content: "Sua assinatura não contempla múltiplas gerações.";
+                content: "Assinatura não contempla lotes.";
                 position: absolute; top: 100%; left: 0%; width: 100%; background: #e11d48; color: white;
-                padding: 5px 0; border-radius: 6px; font-size: 9px; text-align: center; z-index: 99999; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+                padding: 5px 0; border-radius: 6px; font-size: 10px; text-align: center; z-index: 99999; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             }
             """
     st.markdown(f"<style>{css_bloqueio}</style>", unsafe_allow_html=True)
@@ -386,7 +389,7 @@ if st.session_state.get("authentication_status"):
     if user_logado != "madson":
         cota_atual = config_usuarios.get(user_logado, {}).get("quota", 0)
         validade = config_usuarios.get(user_logado, {}).get("trial_end", "N/A")
-        st.sidebar.markdown(f"<div style='background:rgba(255,255,255,0.02); padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);'><p style='color:#94a3b8; font-size:9px; margin:0;'>Uploads Restantes: <b style='color:#38bdf8; font-size:10px;'>{cota_atual}</b></p><p style='color:#94a3b8; font-size:9px; margin:4px 0 0 0;'>Validade: <b style='color:#38bdf8; font-size:10px;'>{validade}</b></p></div>", unsafe_allow_html=True)
+        st.sidebar.markdown(f"<div style='background:rgba(255,255,255,0.02); padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);'><p style='color:#94a3b8; font-size:9px; margin:0;'>Uploads Restantes: <b style='color:#38bdf8; font-size:11px;'>{cota_atual}</b></p><p style='color:#94a3b8; font-size:9px; margin:4px 0 0 0;'>Validade: <b style='color:#38bdf8; font-size:11px;'>{validade}</b></p></div>", unsafe_allow_html=True)
 
     authenticator.logout("Encerrar Sessão", "sidebar")
 
@@ -398,7 +401,7 @@ if st.session_state.get("authentication_status"):
             if 'arquivo_carregado' not in st.session_state: st.session_state.arquivo_carregado = None
 
             if st.session_state.arquivo_carregado is None:
-                st.markdown("<h2 style='color:#ffffff; font-size:18px; font-weight:800; margin-top:-10px; letter-spacing:-0.5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
+                st.markdown("<h2 style='color:#ffffff; font-size:clamp(18px, 2vw, 26px); font-weight:800; margin-top:-10px; letter-spacing:-0.5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
                 file = st.file_uploader("Selecionar Novo Relatório", type="pdf", key="single")
                 if file:
                     st.session_state.arquivo_carregado = file
@@ -412,37 +415,33 @@ if st.session_state.get("authentication_status"):
                 df = pd.DataFrame(dados)
                 total_bruto = df['Valor'].sum()
 
-                col_topo1, col_topo2, col_topo3 = st.columns([5, 2.5, 2.5])
+                col_topo1, col_topo2, col_topo3 = st.columns([4.5, 3.0, 2.5])
                 with col_topo1:
-                    st.markdown("<h2 style='color:#ffffff; font-size:18px; font-weight:800; margin-top:-10px; margin-bottom:0px; letter-spacing:-0.5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
-                    st.markdown(f"<p style='color:#64748b; font-size:9px; margin-top:2px; margin-bottom:0px; text-transform:uppercase; letter-spacing:1px;'>Período Auditado: <b style='color:#38bdf8;'>{per}</b></p>", unsafe_allow_html=True)
-                    st.markdown(f"<p style='color:#475569; font-size:8px; margin-top:0px; margin-bottom:0px;'>Arquivo origem: <i>{file.name}</i></p>", unsafe_allow_html=True)
+                    st.markdown("<h2 style='color:#ffffff; font-size:clamp(18px, 2vw, 24px); font-weight:800; margin-top:-10px; margin-bottom:0px; letter-spacing:-0.5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='color:#64748b; font-size:clamp(9px, 1vw, 11px); margin-top:2px; margin-bottom:0px; text-transform:uppercase; letter-spacing:1px;'>Período Auditado: <b style='color:#38bdf8;'>{per}</b></p>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='color:#475569; font-size:9px; margin-top:0px; margin-bottom:0px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>Arquivo origem: <i>{file.name}</i></p>", unsafe_allow_html=True)
                 with col_topo2:
-                    st.markdown("<div style='margin-top:0px;'>", unsafe_allow_html=True)
                     html_rel = gerar_html_interativo(df, per, total_bruto, file.name)
                     nome_arquivo_html = f"RELATORIO DE {per.replace('/', '-').replace(' a ', '_a_')}.html"
                     st.download_button(label="📥 Salvar Relatório Atual", data=html_rel, file_name=nome_arquivo_html, mime="text/html", use_container_width=True)
-                    st.markdown("</div>", unsafe_allow_html=True)
                 with col_topo3:
-                    st.markdown("<div style='margin-top:0px;'>", unsafe_allow_html=True)
                     if st.button("🔄 Novo Upload", use_container_width=True):
                         st.session_state.arquivo_carregado = None
                         st.session_state.cat_expandida = None
                         st.rerun()
-                    st.markdown("</div>", unsafe_allow_html=True)
 
                 st.markdown("<hr style='border-color:rgba(255,255,255,0.05); margin-top:10px; margin-bottom:15px;'>", unsafe_allow_html=True)
                 
-                col_filtros, col_total, col_detalhes = st.columns([2.5, 3.0, 5.5], gap="large")
+                # REBALANCEAMENTO FINO (Flex Layout Real)
+                col_filtros, col_total, col_detalhes = st.columns([3.5, 3.5, 5], gap="large")
                 selecionadas = []
                 categorias_pdf = sorted(df['Cat'].unique())
                 
                 with col_filtros:
-                    st.markdown("<h4 style='color:#94a3b8; font-size:9px; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;'>Categorias</h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='color:#94a3b8; font-size:10px; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;'>Categorias</h4>", unsafe_allow_html=True)
                     for cat in categorias_pdf:
                         v = df[df['Cat'] == cat]['Valor'].sum() if not df.empty else 0
-                        # Ajuste para garantir que o botão da categoria tem todo o espaço necessário (-30% scale)
-                        c_chk, c_btn, c_val = st.columns([0.8, 6.0, 3.2])
+                        c_chk, c_btn, c_val = st.columns([1, 6, 4])
                         with c_chk:
                             if st.checkbox("", value=True, key=f"chk_{cat}"): selecionadas.append(cat)
                         with c_btn:
@@ -450,10 +449,10 @@ if st.session_state.get("authentication_status"):
                             if st.button(cat, key=f"btn_{cat}", use_container_width=True): st.session_state.cat_expandida = cat
                             st.markdown('</div>', unsafe_allow_html=True)
                         with c_val:
-                            st.markdown(f"<div style='padding-top:2px; color:#ffffff; font-weight:700; font-size:10px; text-align:right; white-space:nowrap;'>{formatar_moeda(v)}</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='padding-top:2px; color:#ffffff; font-weight:700; font-size:clamp(11px, 1.1vw, 13px); text-align:right; white-space:nowrap;'>{formatar_moeda(v)}</div>", unsafe_allow_html=True)
 
                 with col_total:
-                    st.markdown("<h4 style='color:#94a3b8; font-size:9px; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;'>Resumo Financeiro</h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='color:#94a3b8; font-size:10px; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;'>Resumo Financeiro</h4>", unsafe_allow_html=True)
                     soma_f = df[df['Cat'].isin(selecionadas)]['Valor'].sum() if not df.empty else 0
                     
                     st.markdown(f'''
@@ -462,13 +461,13 @@ if st.session_state.get("authentication_status"):
                     .caixa-bruto:hover {{ transform: translateY(-2px); box-shadow: 0 12px 25px -10px rgba(37, 99, 235, 0.4); border-color: #38bdf8; }}
                     </style>
                     <div class="caixa-bruto">
-                        <p style="margin:0; color:#94a3b8; font-size:9px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase;">Caixa Total Bruto</p>
-                        <h1 style="margin:8px 0 0 0; font-size:24px; font-weight:900; background: linear-gradient(to right, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; white-space:nowrap;">{formatar_moeda(soma_f)}</h1>
+                        <p style="margin:0; color:#94a3b8; font-size:10px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase;">Caixa Total Bruto</p>
+                        <h1 style="margin:8px 0 0 0; font-size:clamp(22px, 2.5vw, 30px); font-weight:900; background: linear-gradient(to right, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; white-space:nowrap;">{formatar_moeda(soma_f)}</h1>
                     </div>
                     ''', unsafe_allow_html=True)
 
                 with col_detalhes:
-                    st.markdown("<h4 style='color:#94a3b8; font-size:9px; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;'>Detalhamento do Relatório</h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='color:#94a3b8; font-size:10px; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;'>Detalhamento do Relatório</h4>", unsafe_allow_html=True)
                     if st.session_state.cat_expandida:
                         cat_atual = st.session_state.cat_expandida
                         itens = df[df['Cat'] == cat_atual]
@@ -480,7 +479,6 @@ if st.session_state.get("authentication_status"):
                         </style>
                         """, unsafe_allow_html=True)
                         
-                        # O Detalhamento foi MANTIDO com o tamanho de fonte original (13px/12px) a seu pedido.
                         html_itens = f"<div class='detalhe-panel'>"
                         html_itens += f"<h5 style='color:#e2e8f0; margin:0 0 12px 0; font-size:13px; font-weight:700; letter-spacing:0.5px;'>{cat_atual.upper()}</h5>"
                         html_itens += "<div style='max-height: 400px; overflow-y: auto; padding-right:8px;'>"
@@ -495,7 +493,7 @@ if st.session_state.get("authentication_status"):
         if not config_usuarios[user_logado]["batch_allowed"] and user_logado != "madson":
             pass
         else:
-            st.markdown("<h2 style='color:#ffffff; font-size:18px; font-weight:800; letter-spacing:-0.5px; margin-top:-10px;'>Processamento em Lote</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='color:#ffffff; font-size:clamp(18px, 2vw, 26px); font-weight:800; letter-spacing:-0.5px; margin-top:-10px;'>Processamento em Lote</h2>", unsafe_allow_html=True)
             batch_files = st.file_uploader("Selecionar Novos Relatórios", type="pdf", accept_multiple_files=True)
             if batch_files:
                 for f in batch_files[:7]:
@@ -510,14 +508,14 @@ if st.session_state.get("authentication_status"):
         if user_logado != "madson":
             pass
         else:
-            st.markdown("<h2 style='color:#ffffff; font-size:18px; font-weight:800; letter-spacing:-0.5px; margin-top:-10px;'>Histórico de Auditoria</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='color:#ffffff; font-size:clamp(18px, 2vw, 26px); font-weight:800; letter-spacing:-0.5px; margin-top:-10px;'>Histórico de Auditoria</h2>", unsafe_allow_html=True)
             if os.path.exists(LOG_FILE): st.dataframe(pd.read_csv(LOG_FILE, sep=';').sort_index(ascending=False), use_container_width=True)
 
     elif pagina == "Central de Permissões":
         if user_logado != "madson":
             pass
         else:
-            st.markdown("<h2 style='color:#ffffff; font-size:18px; font-weight:800; margin-bottom: 15px; letter-spacing:-0.5px; margin-top:-10px;'>Central de Permissões</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='color:#ffffff; font-size:clamp(18px, 2vw, 26px); font-weight:800; margin-bottom: 20px; letter-spacing:-0.5px; margin-top:-10px;'>Central de Permissões</h2>", unsafe_allow_html=True)
             
             c1, c2 = st.columns(2, gap="large")
             
