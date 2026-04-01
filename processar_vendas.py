@@ -8,39 +8,47 @@ from decimal import Decimal
 from datetime import datetime, date
 import os
 import json
+import time
 
 # ==========================================
-# 1. CONFIGURAÇÕES VISUAIS E CSS (CORPORATIVO)
+# 1. CONFIGURAÇÕES VISUAIS E CSS (ALTO CONTRASTE)
 # ==========================================
 st.set_page_config(page_title="Canadá BI - Corporate", layout="wide")
 
 st.markdown("""
     <style>
-    /* Fundo Escuro Corporativo */
-    .stApp, .stApp > header { background-color: #0f172a !important; }
-    [data-testid="stSidebar"] { background-color: #0f172a !important; border-right: 1px solid #1e293b !important; }
+    /* Fundo ULTRA Escuro (Quase Preto) para maximizar o contraste */
+    .stApp, .stApp > header { background-color: #020617 !important; }
+    [data-testid="stSidebar"] { background-color: #020617 !important; border-right: 1px solid #1e293b !important; }
     
-    /* Textos dos formulários legíveis */
-    .stTextInput label p, .stPasswordInput label p { color: #f8fafc !important; font-weight: 600 !important; }
+    /* Textos Gerais 100% Brancos */
+    .stTextInput label p, .stPasswordInput label p, .stSelectbox label p, .stNumberInput label p, .stDateInput label p { 
+        color: #ffffff !important; font-weight: 700 !important; font-size: 14px !important;
+    }
+    
+    /* Inputs (Caixas de texto) mais escuras com letras brancas */
+    .stTextInput input, .stPasswordInput input {
+        background-color: #0f172a !important; color: #ffffff !important; border: 1px solid #334155 !important;
+    }
     
     /* Upload limpo e arredondado */
-    [data-testid="stFileUploadDropzone"] { background-color: #1e293b !important; }
+    [data-testid="stFileUploadDropzone"] { background-color: #0f172a !important; }
     [data-testid="stFileUploader"] {
-        background-color: #1e293b !important; border-radius: 12px; padding: 15px;
-        border: 1px dashed #334155 !important;
+        background-color: #0f172a !important; border-radius: 12px; padding: 15px;
+        border: 1px dashed #38bdf8 !important;
     }
     [data-testid="stFileUploaderDropzoneInstructions"] { display: none; }
     small { display: none !important; }
     
-    /* Menu Lateral Futurista */
+    /* Menu Lateral Futurista - Texto mais branco */
     div[role="radiogroup"] > label > div:first-of-type { display: none; }
     div[role="radiogroup"] > label {
-        background: #1e293b !important; border: 1px solid #334155 !important; border-radius: 6px;
+        background: #0f172a !important; border: 1px solid #334155 !important; border-radius: 6px;
         padding: 10px; margin-bottom: 8px; text-align: center; cursor: pointer;
-        transition: all 0.3s ease; color: #cbd5e1 !important; font-weight: bold; width: 100%;
+        transition: all 0.3s ease; color: #ffffff !important; font-weight: bold; width: 100%;
         position: relative;
     }
-    div[role="radiogroup"] > label:hover { background: #0f172a !important; border-color: #0ea5e9 !important; color: #0ea5e9 !important; transform: translateX(5px); }
+    div[role="radiogroup"] > label:hover { background: #1e293b !important; border-color: #0ea5e9 !important; color: #0ea5e9 !important; transform: translateX(5px); }
     div[role="radiogroup"] > label[data-baseweb="radio"] > div:last-child { width: 100%; }
     
     /* BOTÕES MENORES E DISCRETOS */
@@ -48,16 +56,16 @@ st.markdown("""
         padding: 2px 10px !important; font-size: 12px !important; min-height: 30px !important; border-radius: 6px !important;
     }
 
-    /* COMPACTAÇÃO DA COLUNA DE CATEGORIAS */
+    /* COMPACTAÇÃO EXTREMA DA COLUNA DE CATEGORIAS */
     div[data-testid="column"]:nth-of-type(1) div[data-testid="stHorizontalBlock"] {
-        gap: 0.1rem !important; align-items: center !important; margin-bottom: -15px !important;
+        gap: 0rem !important; align-items: center !important; margin-bottom: -20px !important;
     }
     .botao-categoria button {
-        background-color: transparent !important; border: 1px solid #334155 !important; color: #cbd5e1 !important;
-        justify-content: flex-start !important; padding: 2px 8px !important; font-weight: normal !important;
-        font-size: 11px !important; box-shadow: none !important; border-radius: 4px !important; min-height: 22px !important;
+        background-color: transparent !important; border: 1px solid transparent !important; color: #ffffff !important;
+        justify-content: flex-start !important; padding: 0px 8px !important; font-weight: bold !important;
+        font-size: 12px !important; box-shadow: none !important; border-radius: 4px !important; min-height: 20px !important;
     }
-    .botao-categoria button:hover { border-color: #0ea5e9 !important; color: #0ea5e9 !important; background-color: rgba(14, 165, 233, 0.1) !important; }
+    .botao-categoria button:hover { color: #38bdf8 !important; background-color: transparent !important; text-decoration: underline; }
 
     /* Scrollbar minimalista */
     ::-webkit-scrollbar { width: 4px; }
@@ -66,7 +74,7 @@ st.markdown("""
 
     /* Assinatura global invencível e à esquerda */
     .assinatura-master {
-        position: fixed; bottom: 15px; left: 15px; background: rgba(15, 23, 42, 0.95); color: #94a3b8;
+        position: fixed; bottom: 15px; left: 15px; background: rgba(2, 6, 23, 0.95); color: #ffffff;
         padding: 8px 15px; border-radius: 20px; font-size: 10px; border: 1px solid #334155; 
         z-index: 999999; backdrop-filter: blur(5px); pointer-events: none; white-space: nowrap;
     }
@@ -80,7 +88,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. SISTEMA DE GERENCIAMENTO (JSON) E MIGRAÇÃO
+# 2. SISTEMA DE GERENCIAMENTO (JSON)
 # ==========================================
 CONFIG_FILE = "usuarios_config.json"
 LOG_FILE = "log_atividades.csv"
@@ -136,7 +144,7 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE E NOVA LÓGICA DE EXTRAÇÃO
+# 3. FUNÇÕES CORE (CONGELADAS)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -153,72 +161,45 @@ def limpar_nome_produto(nome_bruto):
     return nome.replace('.', '').replace('-', '').strip()[:22]
 
 def palpite_categoria(nome):
-    """Categorizador Perfeito conforme regras rigorosas do Madson"""
     txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
-    
-    # Exceções blindadas para evitar falsos positivos
     if "BATATA DOCE" in txt: return "Mercearia"
     if "ITALAKINHO" in txt: return "Mercearia"
-    
-    # As 5 Categorias Oficiais
-    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG", "GUDANG"]): 
-        return "Tabacaria"
-    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA"]): 
-        return "Bebidas"
-    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA"]): 
-        return "Bomboniere"
-    if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO"]): 
-        return "Remédios"
-        
+    if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG", "GUDANG"]): return "Tabacaria"
+    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA"]): return "Bebidas"
+    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA"]): return "Bomboniere"
+    if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO"]): return "Remédios"
     return "Mercearia"
 
 def processar_pdf(file):
-    """Novo motor que não pula pacotes e ignora linhas de 'TOTAL'"""
     dados = []
     file.seek(0)
     with pdfplumber.open(file) as pdf:
         txt_topo = (pdf.pages[0].extract_text() or "")
         match_d = re.search(r'(\d{2}/\d{2}/\d{4})\s*[AÀaà]\s*(\d{2}/\d{2}/\d{4})', txt_topo)
         periodo = f"{match_d.group(1)} a {match_d.group(2)}" if match_d else "DATA DESCONHECIDA"
-        
         for page in pdf.pages:
             texto_limpo = (page.extract_text() or "").replace('"', '').replace('\r', '')
             linhas = texto_limpo.split('\n')
-            
             for linha in linhas:
-                # TRAVA DE SEGURANÇA 1: Ignora subtotais
-                if "TOTAL" in linha.upper() or "PÁGINA" in linha.upper():
-                    continue
-                    
+                if "TOTAL" in linha.upper() or "PÁGINA" in linha.upper(): continue
                 try:
                     valores = re.findall(r'\d+,\d{2}', linha)
                     if len(valores) >= 4:
-                        # TRAVA DE SEGURANÇA 2: Se não tem Código de Barras (EAN), não é produto!
                         ean_m = re.search(r'\b\d{7,14}\b', linha)
-                        if not ean_m:
-                            continue
-                            
-                        # Limpeza do texto para pegar o nome do produto com precisão
+                        if not ean_m: continue
                         str_sem_ean = linha.replace(ean_m.group(), "").strip()
                         partes = re.split(r'\s*\b\d+,\d{2}\b', str_sem_ean)
                         n_bruto = partes[0].strip()
-                        
-                        # Remove a sigla da embalagem do final (UN, PCT, CX, KG, etc)
                         n_bruto = re.sub(r'\s+(UN|KG|CX|PCT|L|ML|G|KIT|M|DZ|BD|FD)\b$', '', n_bruto, flags=re.IGNORECASE).strip()
-                        
                         nome_limpo = limpar_nome_produto(n_bruto)
-                        # Pega o 4º valor numérico de trás pra frente (Sempre o Total Bruto)
                         val = float(valores[-4].replace(',', '.'))
-                        
                         dados.append({"Nome": nome_limpo, "Cat": palpite_categoria(nome_limpo), "Valor": val})
-                except Exception as e: 
-                    continue
+                except Exception as e: continue
     return dados, periodo
 
 def gerar_html_interativo(df, periodo, total_geral):
     colunas_html = ""
     categorias_presentes = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
-    
     for i, cat in enumerate(categorias_presentes):
         paleta = CORES_CATEGORIAS.get(cat, {"bg": "#334155", "glow": "rgba(51, 65, 85, 0.2)"})
         itens_cat = df[df['Cat'] == cat]
@@ -244,12 +225,12 @@ def gerar_html_interativo(df, periodo, total_geral):
         <title>Canadá BI - Relatório Oficial</title>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
         <style>
-            :root {{ --bg-main: #0f172a; --bg-panel: #1e293b; --bg-card: #0f172a; --text-main: #f8fafc; --text-muted: #94a3b8; --accent: #38bdf8; --success: #38bdf8; }}
+            :root {{ --bg-main: #020617; --bg-panel: #0f172a; --bg-card: #0f172a; --text-main: #ffffff; --text-muted: #94a3b8; --accent: #38bdf8; --success: #38bdf8; }}
             body {{ background-color: var(--bg-main); color: var(--text-main); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; padding-bottom: 80px; }}
             ::-webkit-scrollbar {{ width: 6px; }}
             ::-webkit-scrollbar-track {{ background: var(--bg-main); }}
             ::-webkit-scrollbar-thumb {{ background: #334155; border-radius: 10px; }}
-            .neon-bar {{ background: linear-gradient(90deg, #1e293b, #1e3a8a); padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 30px; border: 1px solid #334155; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }}
+            .neon-bar {{ background: linear-gradient(90deg, #0f172a, #1e3a8a); padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 30px; border: 1px solid #334155; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }}
             .neon-bar h3 {{ margin: 0; font-size: 12px; color: #cbd5e1; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }}
             .neon-bar h1 {{ margin: 5px 0; font-size: 38px; font-weight: 800; color: white; }}
             .container-cols {{ display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; align-items: flex-start; }}
@@ -262,14 +243,14 @@ def gerar_html_interativo(df, periodo, total_geral):
             .accordion-content.show {{ max-height: 400px; border: 1px solid #334155; border-top: none; }}
             .content-inner {{ padding: 12px 8px; display: flex; flex-direction: column; gap: 6px; }}
             .cyber-card {{ background: var(--bg-card); padding: 10px; border-radius: 4px; border-left: 3px solid var(--accent); display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155; }}
-            .card-title {{ font-size: 11px; color: #cbd5e1; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+            .card-title {{ font-size: 11px; color: #ffffff; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
             .card-value {{ font-size: 12px; font-weight: bold; color: var(--accent); }}
-            .assinatura-html {{ position: fixed; bottom: 15px; left: 20px; background: rgba(15, 23, 42, 0.9); color: #94a3b8; padding: 8px 15px; border-radius: 20px; font-size: 11px; border: 1px solid #334155; z-index: 9999; }}
+            .assinatura-html {{ position: fixed; bottom: 15px; left: 20px; background: rgba(2, 6, 23, 0.95); color: #ffffff; padding: 8px 15px; border-radius: 20px; font-size: 11px; border: 1px solid #334155; z-index: 9999; }}
             .assinatura-html span {{ color: #38bdf8; font-weight: bold; }}
         </style>
     </head>
     <body>
-        <div class="neon-bar"><h3>CAIXA TOTAL SELECIONADO</h3><h1 id="display-total">R$ {total_geral:,.2f}</h1><p style="color:#94a3b8; font-size:11px; margin:0;">Período: {periodo}</p></div>
+        <div class="neon-bar"><h3>CAIXA TOTAL SELECIONADO</h3><h1 id="display-total">R$ {total_geral:,.2f}</h1><p style="color:#cbd5e1; font-size:11px; margin:0;">Período: {periodo}</p></div>
         <div class="container-cols">{colunas_html}</div>
         <div class="assinatura-html">Desenvolvido por <span>@madson_da_hora</span> / Analista de dados e Programador</div>
         <script>
@@ -292,7 +273,7 @@ credentials_dict = {"usernames": {}}
 for u, data in config_usuarios.items():
     credentials_dict["usernames"][u] = {"name": data["name"], "password": data["password"]}
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v20", "auth_key_v20", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v21", "auth_key_v21", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
@@ -302,7 +283,7 @@ if st.session_state.get("authentication_status"):
     if 'cat_expandida' not in st.session_state:
         st.session_state.cat_expandida = None
 
-    st.sidebar.markdown(f"<h3 style='color:#f8fafc; font-size:16px; margin-bottom: 20px;'>Usuário: {st.session_state['name']}</h3>", unsafe_allow_html=True)
+    st.sidebar.markdown(f"<h3 style='color:#ffffff; font-size:16px; margin-bottom: 20px;'>Usuário: {st.session_state['name']}</h3>", unsafe_allow_html=True)
     
     if user_logado != 'madson':
         st.markdown("""
@@ -323,13 +304,13 @@ if st.session_state.get("authentication_status"):
     if user_logado != "madson":
         cota_atual = config_usuarios.get(user_logado, {}).get("quota", 0)
         validade = config_usuarios.get(user_logado, {}).get("trial_end", "N/A")
-        st.sidebar.markdown(f"<p style='color:#94a3b8; font-size:12px;'>Uploads Restantes: <b style='color:#0ea5e9;'>{cota_atual}</b></p>", unsafe_allow_html=True)
-        st.sidebar.markdown(f"<p style='color:#94a3b8; font-size:12px;'>Validade Trial: <b style='color:#0ea5e9;'>{validade}</b></p>", unsafe_allow_html=True)
+        st.sidebar.markdown(f"<p style='color:#ffffff; font-size:12px;'>Uploads Restantes: <b style='color:#38bdf8;'>{cota_atual}</b></p>", unsafe_allow_html=True)
+        st.sidebar.markdown(f"<p style='color:#ffffff; font-size:12px;'>Validade Trial: <b style='color:#38bdf8;'>{validade}</b></p>", unsafe_allow_html=True)
 
     authenticator.logout("Encerrar Sessao", "sidebar")
 
     if pagina == "Análise de Relatório":
-        st.markdown("<h2 style='color:white; font-size:22px; margin-bottom: 5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:#ffffff; font-size:22px; margin-bottom: 5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
         trial_end = datetime.strptime(config_usuarios[user_logado]["trial_end"], "%Y-%m-%d").date()
         
         if date.today() > trial_end or (config_usuarios[user_logado]["quota"] <= 0 and user_logado != "madson"):
@@ -360,15 +341,17 @@ if st.session_state.get("authentication_status"):
                         st.session_state.cat_expandida = None
                         st.rerun()
 
-                st.markdown(f"<p style='color:#94a3b8; font-size:12px; margin-top:10px; border-bottom: 1px solid #1e293b; padding-bottom:10px;'>Período Analisado: <b style='color:white;'>{per}</b></p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='color:#ffffff; font-size:12px; margin-top:10px; border-bottom: 1px solid #1e293b; padding-bottom:10px;'>Período Analisado: <b style='color:#38bdf8;'>{per}</b></p>", unsafe_allow_html=True)
                 
-                col_filtros, col_total, col_detalhes = st.columns([3, 3, 4], gap="large")
+                # Ajuste de colunas para dar MAIS ESPAÇO ao detalhamento
+                col_filtros, col_total, col_detalhes = st.columns([2.5, 3, 4.5], gap="large")
                 selecionadas = []
-                categorias = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
+                
+                categorias_pdf = sorted(df['Cat'].unique())
                 
                 with col_filtros:
-                    st.markdown("<h4 style='color:#94a3b8; font-size:12px; margin-bottom:10px; text-transform:uppercase;'>Categorias</h4>", unsafe_allow_html=True)
-                    for cat in categorias:
+                    st.markdown("<h4 style='color:#ffffff; font-size:12px; margin-bottom:10px; text-transform:uppercase;'>Categorias</h4>", unsafe_allow_html=True)
+                    for cat in categorias_pdf:
                         v = df[df['Cat'] == cat]['Valor'].sum() if not df.empty else 0
                         c_chk, c_btn, c_val = st.columns([1, 5, 3])
                         with c_chk:
@@ -378,39 +361,41 @@ if st.session_state.get("authentication_status"):
                             if st.button(cat.upper(), key=f"btn_{cat}", use_container_width=True): st.session_state.cat_expandida = cat
                             st.markdown('</div>', unsafe_allow_html=True)
                         with c_val:
-                            st.markdown(f"<div style='padding-top:2px; color:#0ea5e9; font-weight:bold; font-size:12px;'>{formatar_moeda(v)}</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='padding-top:2px; color:#38bdf8; font-weight:bold; font-size:12px;'>{formatar_moeda(v)}</div>", unsafe_allow_html=True)
 
                 with col_total:
-                    st.markdown("<h4 style='color:#94a3b8; font-size:12px; margin-bottom:10px; text-transform:uppercase;'>Resumo Financeiro</h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='color:#ffffff; font-size:12px; margin-bottom:10px; text-transform:uppercase;'>Resumo Financeiro</h4>", unsafe_allow_html=True)
                     soma_f = df[df['Cat'].isin(selecionadas)]['Valor'].sum() if not df.empty else 0
                     st.markdown(f'''
                     <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 20px; border-radius: 8px; text-align: center; border: 1px solid #3b82f6;">
-                        <p style="margin:0; color:#cbd5e1; font-size:11px; font-weight:bold; letter-spacing:1px;">CAIXA TOTAL BRUTO</p>
+                        <p style="margin:0; color:#ffffff; font-size:11px; font-weight:bold; letter-spacing:1px;">CAIXA TOTAL BRUTO</p>
                         <h1 style="margin:5px 0 0 0; color:white; font-size:24px; font-weight:900;">{formatar_moeda(soma_f)}</h1>
                     </div>
                     ''', unsafe_allow_html=True)
 
                 with col_detalhes:
-                    st.markdown("<h4 style='color:#94a3b8; font-size:12px; margin-bottom:10px; text-transform:uppercase;'>Detalhamento (Miniatura)</h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='color:#ffffff; font-size:12px; margin-bottom:10px; text-transform:uppercase;'>Detalhamento do Relatório</h4>", unsafe_allow_html=True)
                     if st.session_state.cat_expandida:
                         cat_atual = st.session_state.cat_expandida
                         itens = df[df['Cat'] == cat_atual]
-                        html_itens = f"<div style='background:#1e293b; padding:10px; border-radius:6px; border-left:2px solid #0ea5e9; border-top:1px solid #334155; border-right:1px solid #334155; border-bottom:1px solid #334155;'>"
-                        html_itens += f"<h5 style='color:white; margin:0 0 8px 0; font-size:11px; letter-spacing:1px;'>{cat_atual.upper()}</h5>"
-                        html_itens += "<div style='max-height: 250px; overflow-y: auto; padding-right:5px;'>"
+                        html_itens = f"<div style='background:#0f172a; padding:10px; border-radius:6px; border-left:2px solid #38bdf8; border-top:1px solid #1e293b; border-right:1px solid #1e293b; border-bottom:1px solid #1e293b;'>"
+                        html_itens += f"<h5 style='color:white; margin:0 0 8px 0; font-size:12px; letter-spacing:1px;'>{cat_atual.upper()}</h5>"
+                        
+                        # Altura Máxima aumentada para 400px! Mais itens na tela.
+                        html_itens += "<div style='max-height: 400px; overflow-y: auto; padding-right:5px;'>"
                         for _, row in itens.iterrows():
-                            html_itens += f"<div style='display:flex; justify-content:space-between; border-bottom:1px solid #334155; padding:4px 0;'><span style='color:#cbd5e1; font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70%;'>{row['Nome']}</span><span style='color:#0ea5e9; font-size:10px; font-weight:bold;'>R$ {row['Valor']:,.2f}</span></div>"
+                            html_itens += f"<div style='display:flex; justify-content:space-between; border-bottom:1px solid #1e293b; padding:6px 0;'><span style='color:#ffffff; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70%;'>{row['Nome']}</span><span style='color:#38bdf8; font-size:11px; font-weight:bold;'>R$ {row['Valor']:,.2f}</span></div>"
                         html_itens += "</div></div>"
                         st.markdown(html_itens, unsafe_allow_html=True)
                     else:
-                        st.markdown("""<div style="background:#1e293b; padding:15px; border-radius:6px; text-align:center; border: 1px dashed #334155;"><p style="color:#94a3b8; font-size:11px; margin:0;">👈 Clique na categoria para inspecionar</p></div>""", unsafe_allow_html=True)
+                        st.markdown("""<div style="background:#0f172a; padding:15px; border-radius:6px; text-align:center; border: 1px dashed #334155;"><p style="color:#ffffff; font-size:11px; margin:0;">👈 Clique na categoria para inspecionar</p></div>""", unsafe_allow_html=True)
 
     elif pagina == "Gerar Multiplos Relatorios":
         if not config_usuarios[user_logado]["batch_allowed"] and user_logado != "madson":
             st.toast("🔒 Sem permissão para essa função, requer mudança de plano.")
             st.warning("Acesso Restrito: Sua assinatura não contempla múltiplas gerações.")
         else:
-            st.markdown("<h2 style='color:white; font-size:22px;'>Processamento em Lote</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='color:#ffffff; font-size:22px;'>Processamento em Lote</h2>", unsafe_allow_html=True)
             batch_files = st.file_uploader("Selecionar Novos Relatórios", type="pdf", accept_multiple_files=True)
             if batch_files:
                 for f in batch_files[:7]:
@@ -426,7 +411,7 @@ if st.session_state.get("authentication_status"):
             st.toast("🔒 Sem permissão para essa função, requer mudança de plano.")
             st.warning("Acesso Restrito ao Administrador.")
         else:
-            st.markdown("<h2 style='color:white; font-size:22px;'>Histórico de Registros</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='color:#ffffff; font-size:22px;'>Histórico de Registros</h2>", unsafe_allow_html=True)
             if os.path.exists(LOG_FILE): st.dataframe(pd.read_csv(LOG_FILE, sep=';').sort_index(ascending=False), use_container_width=True)
 
     elif pagina == "Central de Permissões":
@@ -434,14 +419,16 @@ if st.session_state.get("authentication_status"):
             st.toast("🔒 Sem permissão para essa função, requer mudança de plano.")
             st.warning("Acesso Restrito ao Administrador.")
         else:
-            st.markdown("<h2 style='color:white; font-size:22px;'>Central de Permissões</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='color:#ffffff; font-size:22px;'>Central de Permissões</h2>", unsafe_allow_html=True)
+            
+            # --- EDIÇÃO DE USUÁRIOS EXISTENTES ---
+            st.markdown("<h4 style='color:#38bdf8; font-size:16px;'>Editar Usuário Existente</h4>", unsafe_allow_html=True)
             usuarios_comuns = [u for u in config_usuarios.keys() if u != "madson"]
-            usr_selecionado = st.selectbox("Selecione o Usuário para Editar", usuarios_comuns)
+            usr_selecionado = st.selectbox("Selecione o Usuário", usuarios_comuns)
             
             if usr_selecionado:
                 dados_usr = config_usuarios[usr_selecionado]
                 with st.form("form_admin"):
-                    st.markdown(f"<h4 style='color:#38bdf8; font-size:16px;'>Editando: {usr_selecionado.capitalize()}</h4>", unsafe_allow_html=True)
                     nova_senha = st.text_input("Senha de Acesso do Usuário", value=dados_usr["password"])
                     novo_batch = st.checkbox("Habilitar 'Gerar Múltiplos Relatórios'", value=dados_usr["batch_allowed"])
                     nova_cota = st.number_input("Cota Restante de Uploads", min_value=0, value=dados_usr["quota"], step=1)
@@ -454,7 +441,36 @@ if st.session_state.get("authentication_status"):
                         config_usuarios[usr_selecionado]["quota"] = nova_cota
                         config_usuarios[usr_selecionado]["trial_end"] = nova_data.strftime("%Y-%m-%d")
                         salvar_configuracoes(config_usuarios)
-                        st.success("Permissões e Senha atualizadas! A nova senha já está valendo.")
+                        st.success("Permissões e Senha atualizadas!")
+            
+            st.markdown("---")
+            
+            # --- NOVIDADE: CRIAÇÃO DE NOVO USUÁRIO ---
+            st.markdown("<h4 style='color:#10b981; font-size:16px;'>Cadastrar Novo Usuário</h4>", unsafe_allow_html=True)
+            with st.form("form_novo_usuario"):
+                novo_login = st.text_input("Login de Acesso (Ex: carlos123)")
+                novo_nome = st.text_input("Nome de Exibição do Cliente")
+                nova_senha_criacao = st.text_input("Definir Senha", type="password")
+                
+                if st.form_submit_button("Adicionar Usuário ao Sistema"):
+                    if novo_login and novo_nome and nova_senha_criacao:
+                        novo_login_formatado = novo_login.lower().strip()
+                        if novo_login_formatado in config_usuarios:
+                            st.error("Este login já está em uso!")
+                        else:
+                            config_usuarios[novo_login_formatado] = {
+                                "name": novo_nome,
+                                "password": nova_senha_criacao,
+                                "batch_allowed": False,
+                                "quota": 10,
+                                "trial_end": "2026-12-31"
+                            }
+                            salvar_configuracoes(config_usuarios)
+                            st.success(f"Usuário '{novo_login_formatado}' criado com sucesso! Ele já pode acessar o sistema.")
+                            time.sleep(1.5)
+                            st.rerun() # Atualiza a página para o novo usuário aparecer na lista de cima
+                    else:
+                        st.warning("Preencha todos os campos para cadastrar o usuário.")
 
 elif st.session_state.get("authentication_status") is False:
     st.error("Credenciais inválidas.")
