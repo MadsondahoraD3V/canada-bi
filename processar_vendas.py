@@ -10,67 +10,74 @@ import os
 import json
 
 # ==========================================
-# 1. CONFIGURAÇÕES VISUAIS E CSS (SITE)
+# 1. CONFIGURAÇÕES VISUAIS E CSS (CORPORATIVO)
 # ==========================================
 st.set_page_config(page_title="Canadá BI - Corporate", layout="wide")
 
 st.markdown("""
     <style>
-    /* Fundo Escuro */
-    .stApp { background-color: #020617; }
+    /* Fundo Escuro Corporativo (Slate/Navy) */
+    .stApp { background-color: #0f172a; }
     
-    /* Assinatura Flutuante */
+    /* Assinatura Flutuante Global (Movida para a ESQUERDA) */
     .assinatura-flutuante {
-        position: fixed; bottom: 15px; right: 20px;
-        background: rgba(15, 23, 42, 0.8); color: #38bdf8;
-        padding: 8px 15px; border-radius: 20px; font-size: 11px; font-weight: bold;
-        border: 1px solid #38bdf8; z-index: 9999; backdrop-filter: blur(5px);
-        box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+        position: fixed; bottom: 15px; left: 20px;
+        background: rgba(15, 23, 42, 0.9); color: #94a3b8;
+        padding: 8px 15px; border-radius: 20px; font-size: 11px;
+        border: 1px solid #334155; z-index: 9999; backdrop-filter: blur(5px);
     }
+    .assinatura-flutuante span { color: #38bdf8; font-weight: bold; }
 
-    /* Total Flutuante no Topo */
+    /* Total Flutuante no Topo (Azul Sóbrio) */
     .floating-sum {
         position: fixed; top: 70px; right: 30px;
-        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-        color: white; padding: 15px 20px; border-radius: 12px; z-index: 1000;
-        font-weight: 900; font-size: 18px; box-shadow: 0 10px 25px rgba(16,185,129,0.4);
-        text-align: center; border: 1px solid rgba(255,255,255,0.2);
+        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+        color: white; padding: 15px 25px; border-radius: 8px; z-index: 1000;
+        font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        text-align: center; border: 1px solid #3b82f6;
     }
     
-    /* Cards de Categoria */
+    /* Cards de Categoria (Amostragem mais limpa) */
     .cat-card {
-        background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.3);
-        border-radius: 10px; padding: 10px; text-align: center; margin-top: 5px;
+        background: #1e293b; border: 1px solid #334155;
+        border-radius: 6px; padding: 15px; text-align: center; margin-top: 5px;
+        transition: all 0.3s;
     }
+    .cat-card:hover { border-color: #38bdf8; background: #0f172a; }
 
-    /* MENU LATERAL FUTURISTA (Escondendo as bolinhas do Radio) */
+    /* Menu Lateral Futurista */
     div[role="radiogroup"] > label > div:first-of-type { display: none; }
     div[role="radiogroup"] > label {
-        background: #0f172a; border: 1px solid #1e293b; border-radius: 8px;
-        padding: 12px; margin-bottom: 8px; text-align: center; cursor: pointer;
-        transition: all 0.3s ease; color: #94a3b8; font-weight: bold; width: 100%;
+        background: #1e293b; border: 1px solid #334155; border-radius: 6px;
+        padding: 10px; margin-bottom: 8px; text-align: center; cursor: pointer;
+        transition: all 0.3s ease; color: #cbd5e1; font-weight: bold; width: 100%;
     }
     div[role="radiogroup"] > label:hover { 
-        background: #1e293b; border-color: #38bdf8; color: #38bdf8; transform: translateX(5px);
+        background: #0f172a; border-color: #38bdf8; color: #38bdf8; transform: translateX(5px);
     }
-    /* Estilo para a opção selecionada */
     div[role="radiogroup"] > label[data-baseweb="radio"] > div:last-child { width: 100%; }
     
-    /* Esconder footer padrão do Streamlit */
+    /* Customizando a área de Upload */
+    [data-testid="stFileUploader"] {
+        background-color: #1e293b; border-radius: 12px; padding: 15px;
+        border: 1px solid #334155;
+    }
+    
+    /* Ocultando textos desnecessários do uploader nativo */
+    [data-testid="stFileUploaderDropzoneInstructions"] { display: none; }
+    small { display: none !important; }
     footer {visibility: hidden;}
     </style>
     
-    <!-- Injetando a Assinatura Flutuante no HTML do Streamlit -->
-    <div class="assinatura-flutuante">Desenvolvido por @madson_da_hora / Analista de dados e Programador</div>
+    <div class="assinatura-flutuante">Desenvolvido por <span>@madson_da_hora</span> / Analista de dados e Programador</div>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. SISTEMA DE GERENCIAMENTO DE USUÁRIOS (JSON)
+# 2. SISTEMA DE GERENCIAMENTO (JSON) E SESSÃO
 # ==========================================
 CONFIG_FILE = "usuarios_config.json"
 LOG_FILE = "log_atividades.csv"
 
-# Configuração padrão caso o arquivo não exista
 DEFAULT_CONFIG = {
     "joacildo": {"batch_allowed": False, "quota": 10, "trial_end": "2026-12-31"},
     "danila": {"batch_allowed": False, "quota": 10, "trial_end": "2026-12-31"},
@@ -79,36 +86,21 @@ DEFAULT_CONFIG = {
 
 def carregar_configuracoes():
     if not os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(DEFAULT_CONFIG, f)
+        with open(CONFIG_FILE, 'w') as f: json.dump(DEFAULT_CONFIG, f)
         return DEFAULT_CONFIG
-    with open(CONFIG_FILE, 'r') as f:
-        return json.load(f)
+    with open(CONFIG_FILE, 'r') as f: return json.load(f)
 
 def salvar_configuracoes(config_data):
-    with open(CONFIG_FILE, 'w') as f:
-        json.dump(config_data, f)
+    with open(CONFIG_FILE, 'w') as f: json.dump(config_data, f)
 
 def verificar_acesso(username, config_data, is_batch=False):
-    """Verifica se o usuário pode fazer a ação."""
-    if username == "madson": return True, "" # Admin tem passe livre
-    
+    if username == "madson": return True, "" 
     user_data = config_data.get(username)
     if not user_data: return False, "Usuário não configurado no sistema."
-    
-    # Verifica Data
     trial_end = datetime.strptime(user_data["trial_end"], "%Y-%m-%d").date()
-    if date.today() > trial_end:
-        return False, "Seu período de teste expirou. Contate o Administrador."
-    
-    # Verifica Cota
-    if user_data["quota"] <= 0:
-        return False, "Sua cota de uploads acabou. Contate o Administrador."
-        
-    # Verifica permissão de Lote
-    if is_batch and not user_data["batch_allowed"]:
-        return False, "Você não tem permissão para Gerar Múltiplos Relatórios."
-        
+    if date.today() > trial_end: return False, "Seu período de acesso expirou. Contate o Administrador."
+    if user_data["quota"] <= 0: return False, "Sua cota de uploads atingiu o limite."
+    if is_batch and not user_data["batch_allowed"]: return False, "Acesso restrito: Geração múltipla não permitida."
     return True, ""
 
 def consumir_cota(username, config_data):
@@ -116,8 +108,18 @@ def consumir_cota(username, config_data):
         config_data[username]["quota"] -= 1
         salvar_configuracoes(config_data)
 
+# Função rigorosa para evitar o vazamento de dados entre sessões (Problema da Danila)
+def garantir_mesa_limpa(usuario_atual):
+    if "usuario_anterior" not in st.session_state:
+        st.session_state.usuario_anterior = usuario_atual
+    
+    # Se o usuário que logou agora for diferente do último, apaga o arquivo da memória
+    if st.session_state.usuario_anterior != usuario_atual:
+        st.session_state.arquivo_carregado = None
+        st.session_state.usuario_anterior = usuario_atual
+
 # ==========================================
-# 3. FUNÇÕES CORE E GERADOR DE HTML COMPACTO
+# 3. FUNÇÕES CORE E GERADOR DE HTML (AZUL CORPORATIVO)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -144,13 +146,14 @@ def palpite_categoria(nome):
     return "Mercearia"
 
 def gerar_html_interativo(df, periodo, total_geral):
-    """Gera o HTML Compacto 'Cyber' com colunas lado a lado e assinatura flutuante."""
+    """Gera o HTML com paleta Azul Corporativo, sem verde 'cheguei', e assinatura à esquerda."""
+    # Paleta de tons azuis/sóbrios corporativos
     cores = {
-        "Tabacaria": {"bg": "#ea580c", "glow": "rgba(234, 88, 12, 0.4)"},
-        "Bebidas": {"bg": "#2563eb", "glow": "rgba(37, 99, 235, 0.4)"},
-        "Bomboniere": {"bg": "#db2777", "glow": "rgba(219, 39, 119, 0.4)"},
-        "Remédios": {"bg": "#059669", "glow": "rgba(5, 150, 105, 0.4)"},
-        "Mercearia": {"bg": "#475569", "glow": "rgba(71, 85, 105, 0.4)"}
+        "Tabacaria": {"bg": "#334155", "glow": "rgba(51, 65, 85, 0.2)"},    # Chumbo
+        "Bebidas": {"bg": "#1e3a8a", "glow": "rgba(30, 58, 138, 0.2)"},      # Azul Escuro
+        "Bomboniere": {"bg": "#0f766e", "glow": "rgba(15, 118, 110, 0.2)"},  # Verde Petróleo Sóbrio
+        "Remédios": {"bg": "#9a3412", "glow": "rgba(154, 52, 18, 0.2)"},     # Ferrugem
+        "Mercearia": {"bg": "#0369a1", "glow": "rgba(3, 105, 161, 0.2)"}     # Azul Oceano
     }
     colunas_html = ""
     
@@ -161,10 +164,10 @@ def gerar_html_interativo(df, periodo, total_geral):
 
         colunas_html += f"""
         <div class="coluna-categoria">
-            <div class="accordion-header" style="background: {paleta['bg']}; box-shadow: 0 0 15px {paleta['glow']};" onclick="toggleAccordion('content-{i}')">
+            <div class="accordion-header" style="background: {paleta['bg']}; box-shadow: 0 2px 10px {paleta['glow']};" onclick="toggleAccordion('content-{i}')">
                 <div style="display:flex; align-items:center;">
                     <input type="checkbox" checked class="cat-check" data-cat="{cat}" data-valor="{valor_cat}" onclick="event.stopPropagation();" onchange="recalcular()">
-                    <span class="cat-title">{cat.upper()} ▼</span>
+                    <span class="cat-title">{cat.upper()}</span>
                 </div>
                 <span class="cat-total">R$ {valor_cat:,.2f}</span>
             </div>
@@ -178,56 +181,58 @@ def gerar_html_interativo(df, periodo, total_geral):
     <html lang="pt-BR">
     <head>
         <meta charset="UTF-8">
-        <title>Canadá BI - Relatório</title>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+        <title>Canadá BI - Relatório Oficial</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
         <style>
-            :root {{ --bg-main: #020617; --bg-panel: #0f172a; --bg-card: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8; --accent: #38bdf8; --success: #10b981; }}
-            body {{ background-color: var(--bg-main); color: var(--text-main); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; padding-bottom: 60px; }}
+            /* Paleta Sóbria */
+            :root {{ --bg-main: #0f172a; --bg-panel: #1e293b; --bg-card: #0f172a; --text-main: #f8fafc; --text-muted: #94a3b8; --accent: #38bdf8; --success: #38bdf8; }}
+            body {{ background-color: var(--bg-main); color: var(--text-main); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; padding-bottom: 80px; }}
             ::-webkit-scrollbar {{ width: 6px; }}
             ::-webkit-scrollbar-track {{ background: var(--bg-main); }}
             ::-webkit-scrollbar-thumb {{ background: #334155; border-radius: 10px; }}
             
-            .neon-bar {{ background: linear-gradient(90deg, #020617, #0f172a, #064e3b); padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 30px; border: 1px solid #10b98144; box-shadow: 0 0 30px rgba(16, 185, 129, 0.15); }}
-            .neon-bar h3 {{ margin: 0; font-size: 14px; color: var(--text-muted); letter-spacing: 2px; }}
-            .neon-bar h1 {{ margin: 5px 0; font-size: 42px; font-weight: 900; color: var(--success); }}
+            .neon-bar {{ background: linear-gradient(90deg, #1e293b, #1e3a8a); padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 30px; border: 1px solid #334155; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }}
+            .neon-bar h3 {{ margin: 0; font-size: 12px; color: #cbd5e1; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }}
+            .neon-bar h1 {{ margin: 5px 0; font-size: 38px; font-weight: 800; color: white; }}
             
             .container-cols {{ display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; align-items: flex-start; }}
             .coluna-categoria {{ flex: 1; min-width: 220px; max-width: 300px; display: flex; flex-direction: column; }}
             
-            .accordion-header {{ padding: 12px 15px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 10; }}
-            .cat-check {{ width: 18px; height: 18px; cursor: pointer; margin-right: 10px; }}
-            .cat-title {{ font-size: 13px; font-weight: 900; color: white; }}
-            .cat-total {{ font-size: 14px; font-weight: 700; color: white; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; }}
+            .accordion-header {{ padding: 12px 15px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); position: relative; z-index: 10; }}
+            .cat-check {{ width: 16px; height: 16px; cursor: pointer; margin-right: 10px; }}
+            .cat-title {{ font-size: 12px; font-weight: bold; color: white; letter-spacing: 0.5px; }}
+            .cat-total {{ font-size: 13px; font-weight: bold; color: white; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; }}
             
-            .accordion-content {{ max-height: 0px; overflow-y: auto; transition: max-height 0.4s; background-color: var(--bg-panel); border-radius: 0 0 8px 8px; margin-top: -5px; }}
-            .accordion-content.show {{ max-height: 400px; border: 1px solid #1e293b; border-top: none; }}
-            .content-inner {{ padding: 15px 10px; display: flex; flex-direction: column; gap: 8px; }}
+            .accordion-content {{ max-height: 0px; overflow-y: auto; transition: max-height 0.4s; background-color: var(--bg-panel); border-radius: 0 0 6px 6px; margin-top: -3px; }}
+            .accordion-content.show {{ max-height: 400px; border: 1px solid #334155; border-top: none; }}
+            .content-inner {{ padding: 12px 8px; display: flex; flex-direction: column; gap: 6px; }}
             
-            .cyber-card {{ background: var(--bg-card); padding: 10px; border-radius: 6px; border-left: 3px solid var(--accent); display: flex; justify-content: space-between; align-items: center; }}
-            .card-title {{ font-size: 11px; font-weight: 700; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
-            .card-value {{ font-size: 12px; font-weight: 900; color: var(--success); }}
+            .cyber-card {{ background: var(--bg-card); padding: 10px; border-radius: 4px; border-left: 3px solid var(--accent); display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155; }}
+            .card-title {{ font-size: 11px; color: #cbd5e1; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+            .card-value {{ font-size: 12px; font-weight: bold; color: var(--accent); }}
 
-            /* Assinatura Flutuante no HTML gerado */
+            /* Assinatura movida para a Esquerda no HTML gerado */
             .assinatura-html {{
-                position: fixed; bottom: 10px; right: 10px;
-                background: rgba(15, 23, 42, 0.9); color: #38bdf8;
-                padding: 6px 12px; border-radius: 15px; font-size: 10px; font-weight: bold;
-                border: 1px solid #38bdf8; z-index: 9999; box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+                position: fixed; bottom: 15px; left: 20px;
+                background: rgba(15, 23, 42, 0.9); color: #94a3b8;
+                padding: 8px 15px; border-radius: 20px; font-size: 11px;
+                border: 1px solid #334155; z-index: 9999;
             }}
+            .assinatura-html span {{ color: #38bdf8; font-weight: bold; }}
         </style>
     </head>
     <body>
         <div class="neon-bar">
             <h3>CAIXA TOTAL SELECIONADO</h3>
             <h1 id="display-total">R$ {total_geral:,.2f}</h1>
-            <p style="color:#64748b; font-size:12px; margin:0;">Período: {periodo}</p>
+            <p style="color:#94a3b8; font-size:11px; margin:0;">Período: {periodo}</p>
         </div>
         
         <div class="container-cols">
             {colunas_html}
         </div>
 
-        <div class="assinatura-html">Desenvolvido por @madson_da_hora / Analista de dados e Programador</div>
+        <div class="assinatura-html">Desenvolvido por <span>@madson_da_hora</span> / Analista de dados e Programador</div>
 
         <script>
             function toggleAccordion(id) {{
@@ -278,46 +283,49 @@ credentials = {
     }
 }
 
-authenticator = stauth.Authenticate(credentials, "canada_bi_v11", "auth_key_v11", expiry_days=30)
+authenticator = stauth.Authenticate(credentials, "canada_bi_v13", "auth_key_v13", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
     user_logado = st.session_state['username']
+    
+    # GARANTIA DE SESSÃO LIMPA (Resolve o problema de cache entre logins)
+    garantir_mesa_limpa(user_logado)
+    
     config_usuarios = carregar_configuracoes()
 
-    st.sidebar.title(f"Usuário: {st.session_state['name']}")
+    st.sidebar.markdown(f"<h3 style='color:#f8fafc; font-size:16px; margin-bottom: 20px;'>Usuário: {st.session_state['name']}</h3>", unsafe_allow_html=True)
     
-    # Montando o Menu sem emojis
     opcoes_menu = ["Painel Individual", "Gerar Multiplos Relatorios"]
     if user_logado == 'madson':
-        opcoes_menu.append("Historico de Atividades")
-        opcoes_menu.append("Central de Acoes")
+        opcoes_menu.extend(["Historico de Atividades", "Central de Acoes"])
     
     pagina = st.sidebar.radio("Navegação", opcoes_menu, label_visibility="collapsed")
     st.sidebar.markdown("---")
     
-    # Mostrar status da cota na sidebar
     if user_logado != "madson":
         cota_atual = config_usuarios.get(user_logado, {}).get("quota", 0)
         validade = config_usuarios.get(user_logado, {}).get("trial_end", "N/A")
         st.sidebar.markdown(f"<p style='color:#94a3b8; font-size:12px;'>Uploads Restantes: <b style='color:#38bdf8;'>{cota_atual}</b></p>", unsafe_allow_html=True)
-        st.sidebar.markdown(f"<p style='color:#94a3b8; font-size:12px;'>Validade: <b style='color:#38bdf8;'>{validade}</b></p>", unsafe_allow_html=True)
+        st.sidebar.markdown(f"<p style='color:#94a3b8; font-size:12px;'>Validade Trial: <b style='color:#38bdf8;'>{validade}</b></p>", unsafe_allow_html=True)
 
     authenticator.logout("Encerrar Sessao", "sidebar")
 
     # --- PÁGINA 1: PAINEL INDIVIDUAL ---
     if pagina == "Painel Individual":
-        st.title("Análise Individual")
+        st.markdown("<h2 style='color:white; font-size:22px; margin-bottom: 30px;'>Análise Individual</h2>", unsafe_allow_html=True)
         
         pode_acessar, msg_erro = verificar_acesso(user_logado, config_usuarios, is_batch=False)
         
         if not pode_acessar:
             st.error(msg_erro)
         else:
-            if 'arquivo_carregado' not in st.session_state: st.session_state.arquivo_carregado = None
+            if 'arquivo_carregado' not in st.session_state: 
+                st.session_state.arquivo_carregado = None
 
             if st.session_state.arquivo_carregado is None:
-                file = st.file_uploader("Selecione um arquivo PDF", type="pdf", key="single")
+                # O Uploader agora tem o texto claro e limpo
+                file = st.file_uploader("Selecionar Novo Relatório", type="pdf", key="single")
                 if file:
                     st.session_state.arquivo_carregado = file
                     dados, per = processar_pdf(file)
@@ -332,7 +340,7 @@ if st.session_state.get("authentication_status"):
 
                 c1, c2, c3 = st.columns([1, 2, 2])
                 with c1:
-                    if st.button("Remover Arquivo"):
+                    if st.button("Remover Relatório"):
                         st.session_state.arquivo_carregado = None
                         st.rerun()
                 with c2:
@@ -341,7 +349,7 @@ if st.session_state.get("authentication_status"):
                 with c3:
                     st.download_button(label="Baixar PDF Original", data=file, file_name=file.name, mime="application/pdf")
 
-                st.info(f"Período: {per}")
+                st.markdown(f"<p style='color:#94a3b8; font-size:13px; margin-top:20px;'>Período Analisado: <b style='color:white;'>{per}</b></p>", unsafe_allow_html=True)
                 
                 cats = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
                 cols = st.columns(len(cats))
@@ -350,21 +358,21 @@ if st.session_state.get("authentication_status"):
                     with cols[i]:
                         if st.checkbox(c, value=True, key=f"s_{c}"): selecionadas.append(c)
                         v = df[df['Cat'] == c]['Valor'].sum()
-                        st.markdown(f'<div class="cat-card"><div style="color:#94a3b8; font-size:12px; font-weight:bold;">{c.upper()}</div><div style="color:white; font-size:16px; font-weight:bold;">{formatar_moeda(v)}</div></div>', unsafe_allow_html=True)
+                        # Design dos cards mais limpo e corporativo
+                        st.markdown(f'<div class="cat-card"><div style="color:#94a3b8; font-size:11px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase;">{c}</div><div style="color:#38bdf8; font-size:16px; font-weight:bold; margin-top:5px;">{formatar_moeda(v)}</div></div>', unsafe_allow_html=True)
                 
                 soma_f = df[df['Cat'].isin(selecionadas)]['Valor'].sum()
-                st.markdown(f'<div class="floating-sum">SELECIONADO<br>{formatar_moeda(soma_f)}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="floating-sum">TOTAL SELECIONADO<br>{formatar_moeda(soma_f)}</div>', unsafe_allow_html=True)
 
     # --- PÁGINA 2: LOTE ---
     elif pagina == "Gerar Multiplos Relatorios":
-        st.title("Processamento em Lote")
-        
+        st.markdown("<h2 style='color:white; font-size:22px;'>Processamento em Lote</h2>", unsafe_allow_html=True)
         pode_acessar, msg_erro = verificar_acesso(user_logado, config_usuarios, is_batch=True)
         
         if not pode_acessar:
             st.error(msg_erro)
         else:
-            batch_files = st.file_uploader("Selecione os arquivos PDF", type="pdf", accept_multiple_files=True)
+            batch_files = st.file_uploader("Selecionar Novos Relatórios", type="pdf", accept_multiple_files=True)
             if batch_files:
                 for f in batch_files[:7]:
                     try:
@@ -376,14 +384,14 @@ if st.session_state.get("authentication_status"):
 
     # --- PÁGINA 3: HISTÓRICO ---
     elif pagina == "Historico de Atividades":
-        st.title("Histórico de Registros")
+        st.markdown("<h2 style='color:white; font-size:22px;'>Histórico de Registros</h2>", unsafe_allow_html=True)
         if os.path.exists(LOG_FILE):
             st.dataframe(pd.read_csv(LOG_FILE, sep=';').sort_index(ascending=False), use_container_width=True)
 
-    # --- PÁGINA 4: CENTRAL DE AÇÕES (ADMIN) ---
+    # --- PÁGINA 4: ADMIN ---
     elif pagina == "Central de Acoes":
-        st.title("Central de Gerenciamento")
-        st.write("Gerencie acessos e cotas dos usuários do sistema.")
+        st.markdown("<h2 style='color:white; font-size:22px;'>Central de Gerenciamento</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#94a3b8; font-size:13px;'>Gerencie acessos e cotas dos usuários corporativos.</p>", unsafe_allow_html=True)
         
         usuarios_comuns = [u for u in config_usuarios.keys() if u != "madson"]
         usr_selecionado = st.selectbox("Selecione o Usuário", usuarios_comuns)
@@ -392,20 +400,19 @@ if st.session_state.get("authentication_status"):
             dados_usr = config_usuarios[usr_selecionado]
             
             with st.form("form_admin"):
-                st.subheader(f"Editando: {usr_selecionado.capitalize()}")
-                
-                novo_batch = st.checkbox("Permitir 'Gerar Múltiplos Relatórios'?", value=dados_usr["batch_allowed"])
-                nova_cota = st.number_input("Cota de Uploads Restantes", min_value=0, value=dados_usr["quota"], step=1)
+                st.markdown(f"<h4 style='color:#38bdf8;'>Permissões: {usr_selecionado.capitalize()}</h4>", unsafe_allow_html=True)
+                novo_batch = st.checkbox("Habilitar 'Gerar Múltiplos Relatórios'", value=dados_usr["batch_allowed"])
+                nova_cota = st.number_input("Cota Restante de Uploads", min_value=0, value=dados_usr["quota"], step=1)
                 
                 data_atual = datetime.strptime(dados_usr["trial_end"], "%Y-%m-%d").date()
-                nova_data = st.date_input("Vencimento do Acesso (Trial)", value=data_atual)
+                nova_data = st.date_input("Data de Expiração (Trial)", value=data_atual)
                 
-                if st.form_submit_button("Salvar Alterações"):
+                if st.form_submit_button("Salvar Modificações"):
                     config_usuarios[usr_selecionado]["batch_allowed"] = novo_batch
                     config_usuarios[usr_selecionado]["quota"] = nova_cota
                     config_usuarios[usr_selecionado]["trial_end"] = nova_data.strftime("%Y-%m-%d")
                     salvar_configuracoes(config_usuarios)
-                    st.success(f"Configurações de {usr_selecionado} atualizadas com sucesso!")
+                    st.success("Configurações atualizadas com sucesso.")
 
 elif st.session_state.get("authentication_status") is False:
     st.error("Credenciais inválidas.")
