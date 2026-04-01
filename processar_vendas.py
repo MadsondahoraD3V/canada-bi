@@ -34,7 +34,7 @@ st.markdown("""
         backdrop-filter: blur(12px) !important;
     }
     
-    /* TIPOGRAFIA FLUIDA RESPONSIVA (Adapta à tela automaticamente) */
+    /* TIPOGRAFIA FLUIDA RESPONSIVA */
     .stTextInput label p, .stPasswordInput label p, .stSelectbox label p, .stNumberInput label p, .stDateInput label p { 
         color: #e2e8f0 !important; font-weight: 600 !important; 
         font-size: clamp(11px, 1vw, 13px) !important; 
@@ -196,7 +196,7 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE (MOTOR TREINADO COM DATASET)
+# 3. FUNÇÕES CORE (MOTOR TREINADO)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -214,7 +214,7 @@ def limpar_nome_produto(nome_bruto):
 
 def palpite_categoria(nome):
     """
-    Motor treinado com o Dataset Mestre de 1399 produtos.
+    Motor treinado com o Dataset Mestre de 1399 produtos + Ajustes Manuais.
     """
     txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
     
@@ -229,16 +229,16 @@ def palpite_categoria(nome):
     if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA", "IMPERIO", "BEATS", "SPATEN", "CABARE", "CONHAQUE", "DREHER"]): 
         return "Bebidas Alcoólicas", False
         
-    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA", "ICEKISS", "MENTOS", "CHICLE", "EMBARE", "SORV", "PICOLE", "CREMOSIN", "FREEGELLS", "GOMETS", "BATOM", "SERENATA", "KITKAT", "CHOKREM"]): 
+    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA", "ICEKISS", "MENTOS", "CHICLE", "EMBARE", "FREEGELLS", "GOMETS", "BATOM", "SERENATA", "KITKAT", "CHOKREM", "OLHINHO"]): 
         return "Bomboniere", False
         
     if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO", "PARACETAMOL", "CIMEGRIPE", "NEOSALDINA", "NIMESULIDA", "NEOLEFRIN"]): 
         return "Remédios", False
 
-    # 3. MERCEARIA EXPLÍCITA (Treinada pelo Dataset de Estoque)
+    # 3. MERCEARIA EXPLÍCITA (Treinada pelo Dataset de Estoque + Suas Exigências)
     mercearia_explicita = [
         "RACAO", "PAO", "PAES", "COENTRO", "QUEIJO", "LACTEA", "FEIJOADA", "SABAO", "MARGARINA", "MARG ",
-        "MACARRAO", "MAC ", "FARINHA", "PIMENTAO", "LEITE", "OLEO", "CAFE", "OVO", "AMENDOIM", "BATATA",
+        "MACARRAO", "MAC ", "FARINHA", "PIMENTAO", "LEITE", "OLEO", "CAFE", "OVO", "AMENDOIM", "BATATA", "BATATINHA",
         "BOLACHA", "REQUEIJAO", "LINGUICA", "LING ", "MISTURA", "CARNE", "ALHO", "SAZON", "LAMEN", "MIOJO",
         "NISSIM", "PAPEL", "SARDINHA", "DESINF", "SALSICHA", "BISCOITO", "IOGURTE", "ESCOVA", "LAMINA",
         "CREME", "EMPANADO", "CEBOLA", "GOMA", "FRANGO", "COXA", "CARANGUEJO", "HAMBURGUER", "MILHO",
@@ -252,7 +252,8 @@ def palpite_categoria(nome):
         "ABSOLUTO", "ALICE", "SONHO", "JOHNSONS", "EVEN", "PROTEX", "ALBANY", "SIENE", "COLGATE", "SORRISO", "ORAL B", "SKALA",
         "PRESTOBARBA", "GILLETTE", "PROBAK", "HERBISSIMO", "COTONETE", "ALGODAO", "GAS ", "CARVAO", "GELO", "PILHA", "RAIOVAC",
         "VASSOURA", "VELA", "MUCILON", "CREMOGEMA", "CHIMICHURRI", "COMINHO", "OREGANO", "LOURO", "PIMENTA",
-        "BISC ", "PANETONE", "TORRADA", "SASSAMI", "FILE", "MOELA", "CORACAO", "BACON", "PRESUNTO", "FIAMBRE"
+        "BISC ", "PANETONE", "TORRADA", "SASSAMI", "FILE", "MOELA", "CORACAO", "BACON", "PRESUNTO", "FIAMBRE",
+        "BOLDO", "TEMPERO", "DETERGENTE", "DETERG ", "ACAI", "PIC ", "PIC STER", "PICOLE", "CREMOSIN", "SORV"
     ]
     if any(k in txt for k in mercearia_explicita):
         return "Mercearia", False
@@ -374,7 +375,6 @@ credentials_dict = {"usernames": {}}
 for u, data in config_usuarios.items():
     credentials_dict["usernames"][u] = {"name": data["name"], "password": data["password"]}
 
-# --- LOGIN EM BLOCO PEQUENO CENTRALIZADO ---
 if not st.session_state.get("authentication_status"):
     st.markdown("""
         <style>
@@ -386,7 +386,7 @@ if not st.session_state.get("authentication_status"):
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2: st.image("logo.png", use_container_width=True)
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v40", "auth_key_v40", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v41", "auth_key_v41", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
