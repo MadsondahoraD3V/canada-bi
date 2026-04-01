@@ -23,7 +23,7 @@ st.markdown("""
     /* Textos dos formulários legíveis */
     .stTextInput label p, .stPasswordInput label p { color: #f8fafc !important; font-weight: 600 !important; }
     
-    /* Upload limpo */
+    /* Upload limpo e arredondado */
     [data-testid="stFileUploadDropzone"] { background-color: #1e293b !important; }
     [data-testid="stFileUploader"] {
         background-color: #1e293b !important; border-radius: 12px; padding: 15px;
@@ -42,12 +42,36 @@ st.markdown("""
     div[role="radiogroup"] > label:hover { background: #0f172a !important; border-color: #0ea5e9 !important; color: #0ea5e9 !important; transform: translateX(5px); }
     div[role="radiogroup"] > label[data-baseweb="radio"] > div:last-child { width: 100%; }
     
-    /* Customização dos botões das categorias para parecerem links/blocos limpos */
-    .stButton > button {
-        background-color: #1e293b; border: 1px solid #334155; color: #cbd5e1;
-        border-radius: 6px; font-weight: bold; transition: all 0.2s ease;
+    /* BOTÕES MENORES E DISCRETOS (Remover e Salvar) */
+    .stButton > button, .stDownloadButton > button {
+        padding: 2px 10px !important;
+        font-size: 12px !important;
+        min-height: 30px !important;
+        border-radius: 6px !important;
     }
-    .stButton > button:hover { border-color: #0ea5e9; color: #0ea5e9; background-color: #0f172a; }
+
+    /* DESIGN EXECUTIVO PARA OS BOTÕES DE CATEGORIA (Filtros) */
+    .botao-categoria button {
+        background-color: transparent !important;
+        border: 1px solid #334155 !important;
+        color: #cbd5e1 !important;
+        justify-content: flex-start !important;
+        padding: 4px 10px !important;
+        font-weight: normal !important;
+        font-size: 12px !important;
+        box-shadow: none !important;
+        border-radius: 4px !important;
+    }
+    .botao-categoria button:hover {
+        border-color: #0ea5e9 !important;
+        color: #0ea5e9 !important;
+        background-color: rgba(14, 165, 233, 0.1) !important;
+    }
+
+    /* Scrollbar minimalista para o menu interno */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 
     footer {visibility: hidden;}
     </style>
@@ -226,7 +250,7 @@ credentials = {
     }
 }
 
-authenticator = stauth.Authenticate(credentials, "canada_bi_v16", "auth_key_v16", expiry_days=30)
+authenticator = stauth.Authenticate(credentials, "canada_bi_v17", "auth_key_v17", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
@@ -234,7 +258,6 @@ if st.session_state.get("authentication_status"):
     garantir_mesa_limpa(user_logado)
     config_usuarios = carregar_configuracoes()
 
-    # Controle de Memória para o Menu Lateral de Detalhes
     if 'cat_expandida' not in st.session_state:
         st.session_state.cat_expandida = None
 
@@ -255,9 +278,9 @@ if st.session_state.get("authentication_status"):
 
     authenticator.logout("Encerrar Sessao", "sidebar")
 
-    # --- PÁGINA 1: PAINEL INDIVIDUAL COM NOVO LAYOUT 3 COLUNAS ---
+    # --- PÁGINA 1: ANÁLISE DE RELATÓRIO ---
     if pagina == "Painel Individual":
-        st.markdown("<h2 style='color:white; font-size:22px; margin-bottom: 20px;'>Análise Individual</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:white; font-size:22px; margin-bottom: 5px;'>Análise de Relatório</h2>", unsafe_allow_html=True)
         pode_acessar, msg_erro = verificar_acesso(user_logado, config_usuarios, is_batch=False)
         
         if not pode_acessar:
@@ -279,76 +302,71 @@ if st.session_state.get("authentication_status"):
                 df = pd.DataFrame(dados)
                 total_bruto = df['Valor'].sum()
 
-                col_btn1, col_btn2 = st.columns([1, 4])
-                with col_btn1:
-                    if st.button("Remover Relatório"):
+                # BOTÕES MENORES E EMPILHADOS À ESQUERDA
+                col_botoes, col_vazia = st.columns([2, 8])
+                with col_botoes:
+                    html_rel = gerar_html_interativo(df, per, total_bruto)
+                    st.download_button(label="Salvar Relatório", data=html_rel, file_name=f"BI_CANADA_{per.replace('/','-')}.html", mime="text/html", use_container_width=True)
+                    if st.button("Remover Relatório", use_container_width=True):
                         st.session_state.arquivo_carregado = None
                         st.session_state.cat_expandida = None
                         st.rerun()
-                with col_btn2:
-                    html_rel = gerar_html_interativo(df, per, total_bruto)
-                    st.download_button(label="Salvar Relatorio", data=html_rel, file_name=f"BI_CANADA_{per.replace('/','-')}.html", mime="text/html")
 
-                st.markdown(f"<p style='color:#94a3b8; font-size:13px; margin-top:20px; border-bottom: 1px solid #1e293b; padding-bottom:10px;'>Período Analisado: <b style='color:white;'>{per}</b></p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='color:#94a3b8; font-size:12px; margin-top:15px; border-bottom: 1px solid #1e293b; padding-bottom:10px;'>Período Analisado: <b style='color:white;'>{per}</b></p>", unsafe_allow_html=True)
                 
-                # --- O NOVO LAYOUT DE 3 COLUNAS (FILTROS | TOTAL | DETALHES) ---
+                # --- LAYOUT DE 3 COLUNAS (FILTROS | TOTAL | DETALHES) ---
                 col_filtros, col_total, col_detalhes = st.columns([3, 3, 4], gap="large")
                 
                 selecionadas = []
                 categorias = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
                 
-                # 1. COLUNA DE FILTROS E CATEGORIAS
                 with col_filtros:
-                    st.markdown("<h4 style='color:#94a3b8; font-size:14px; margin-bottom:15px;'>GERENCIAR CATEGORIAS</h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='color:#94a3b8; font-size:12px; margin-bottom:15px; text-transform:uppercase;'>Categorias</h4>", unsafe_allow_html=True)
                     for cat in categorias:
                         v = df[df['Cat'] == cat]['Valor'].sum()
                         
-                        c_chk, c_btn, c_val = st.columns([1, 4, 3])
+                        c_chk, c_btn, c_val = st.columns([1, 5, 3])
                         with c_chk:
                             if st.checkbox("", value=True, key=f"chk_{cat}"):
                                 selecionadas.append(cat)
                         with c_btn:
+                            st.markdown('<div class="botao-categoria">', unsafe_allow_html=True)
                             if st.button(cat.upper(), key=f"btn_{cat}", use_container_width=True):
                                 st.session_state.cat_expandida = cat
+                            st.markdown('</div>', unsafe_allow_html=True)
                         with c_val:
-                            st.markdown(f"<div style='padding-top:7px; color:#38bdf8; font-weight:bold; font-size:14px;'>{formatar_moeda(v)}</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='padding-top:7px; color:#0ea5e9; font-weight:bold; font-size:13px;'>{formatar_moeda(v)}</div>", unsafe_allow_html=True)
 
-                # 2. COLUNA DO TOTAL CALCULADO
                 with col_total:
-                    st.markdown("<h4 style='color:#94a3b8; font-size:14px; margin-bottom:15px;'>RESUMO FINANCEIRO</h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='color:#94a3b8; font-size:12px; margin-bottom:15px; text-transform:uppercase;'>Resumo Financeiro</h4>", unsafe_allow_html=True)
                     soma_f = df[df['Cat'].isin(selecionadas)]['Valor'].sum()
                     st.markdown(f'''
-                    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 30px 20px; border-radius: 12px; text-align: center; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); border: 1px solid #3b82f6;">
-                        <p style="margin:0; color:#cbd5e1; font-size:13px; font-weight:bold; letter-spacing:1px;">CAIXA TOTAL BRUTO</p>
-                        <h1 style="margin:10px 0 0 0; color:white; font-size:32px; font-weight:900;">{formatar_moeda(soma_f)}</h1>
+                    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 30px 20px; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2); border: 1px solid #3b82f6;">
+                        <p style="margin:0; color:#cbd5e1; font-size:12px; font-weight:bold; letter-spacing:1px;">CAIXA TOTAL BRUTO</p>
+                        <h1 style="margin:10px 0 0 0; color:white; font-size:28px; font-weight:900;">{formatar_moeda(soma_f)}</h1>
                     </div>
                     ''', unsafe_allow_html=True)
 
-                # 3. COLUNA DE DETALHES (MENU LATERAL INTERNO)
                 with col_detalhes:
-                    st.markdown("<h4 style='color:#94a3b8; font-size:14px; margin-bottom:15px;'>DETALHAMENTO DE ITENS</h4>", unsafe_allow_html=True)
+                    st.markdown("<h4 style='color:#94a3b8; font-size:12px; margin-bottom:15px; text-transform:uppercase;'>Detalhamento de Itens</h4>", unsafe_allow_html=True)
                     if st.session_state.cat_expandida:
                         cat_atual = st.session_state.cat_expandida
                         itens = df[df['Cat'] == cat_atual]
                         
-                        html_itens = f"""
-                        <div style='background:#1e293b; padding:15px; border-radius:8px; border-top:3px solid #0ea5e9; border-left:1px solid #334155; border-right:1px solid #334155; border-bottom:1px solid #334155;'>
-                            <h5 style='color:white; margin-top:0; font-size:16px;'>{cat_atual.upper()}</h5>
-                            <div style='max-height: 350px; overflow-y: auto; padding-right:10px;'>
-                        """
+                        # Correção do Bug do HTML (Sem espaços em branco no início da linha para evitar formato de código do Markdown)
+                        html_itens = f"<div style='background:#1e293b; padding:15px; border-radius:8px; border-top:3px solid #0ea5e9; border-left:1px solid #334155; border-right:1px solid #334155; border-bottom:1px solid #334155; box-shadow: 0 4px 10px rgba(0,0,0,0.2);'>"
+                        html_itens += f"<h5 style='color:white; margin:0 0 10px 0; font-size:13px; letter-spacing:1px;'>{cat_atual.upper()}</h5>"
+                        html_itens += "<div style='max-height: 320px; overflow-y: auto; padding-right:5px;'>"
+                        
                         for _, row in itens.iterrows():
-                            html_itens += f"""
-                            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #334155; padding:10px 0;">
-                                <span style="color:#cbd5e1; font-size:12px; max-width:65%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{row['Nome']}</span>
-                                <span style="color:#38bdf8; font-size:13px; font-weight:bold;">R$ {row['Valor']:,.2f}</span>
-                            </div>
-                            """
+                            html_itens += f"<div style='display:flex; justify-content:space-between; border-bottom:1px solid #334155; padding:8px 0;'><span style='color:#cbd5e1; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70%;'>{row['Nome']}</span><span style='color:#0ea5e9; font-size:12px; font-weight:bold;'>R$ {row['Valor']:,.2f}</span></div>"
+                        
                         html_itens += "</div></div>"
                         st.markdown(html_itens, unsafe_allow_html=True)
                     else:
                         st.markdown("""
                         <div style="background:#1e293b; padding:30px; border-radius:8px; text-align:center; border: 1px dashed #334155;">
-                            <p style="color:#94a3b8; font-size:13px; margin:0;">👈 Clique no nome de uma categoria ao lado para inspecionar os produtos vendidos nela.</p>
+                            <p style="color:#94a3b8; font-size:12px; margin:0;">👈 Selecione uma categoria ao lado para inspecionar os itens.</p>
                         </div>
                         """, unsafe_allow_html=True)
 
