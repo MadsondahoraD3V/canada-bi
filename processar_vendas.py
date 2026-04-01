@@ -34,7 +34,7 @@ st.markdown("""
         backdrop-filter: blur(12px) !important;
     }
     
-    /* TIPOGRAFIA FLUIDA RESPONSIVA */
+    /* TIPOGRAFIA FLUIDA RESPONSIVA (Adapta à tela automaticamente) */
     .stTextInput label p, .stPasswordInput label p, .stSelectbox label p, .stNumberInput label p, .stDateInput label p { 
         color: #e2e8f0 !important; font-weight: 600 !important; 
         font-size: clamp(11px, 1vw, 13px) !important; 
@@ -145,9 +145,10 @@ st.markdown("""
 CONFIG_FILE = "usuarios_config.json"
 LOG_FILE = "log_atividades.csv"
 
+# ATUALIZADO: Bebidas Alcoólicas
 CORES_CATEGORIAS = {
     "Tabacaria": {"bg": "rgba(30, 41, 59, 0.7)", "glow": "rgba(51, 65, 85, 0.4)", "border": "#475569"},
-    "Bebidas": {"bg": "rgba(30, 58, 138, 0.6)", "glow": "rgba(37, 99, 235, 0.3)", "border": "#3b82f6"},
+    "Bebidas Alcoólicas": {"bg": "rgba(30, 58, 138, 0.6)", "glow": "rgba(37, 99, 235, 0.3)", "border": "#3b82f6"},
     "Bomboniere": {"bg": "rgba(13, 148, 136, 0.6)", "glow": "rgba(20, 184, 166, 0.3)", "border": "#14b8a6"},
     "Remédios": {"bg": "rgba(190, 18, 60, 0.6)", "glow": "rgba(225, 29, 72, 0.3)", "border": "#e11d48"},
     "Mercearia": {"bg": "rgba(3, 105, 161, 0.6)", "glow": "rgba(2, 132, 199, 0.3)", "border": "#0284c7"}
@@ -196,7 +197,7 @@ def garantir_mesa_limpa(usuario_atual):
         st.session_state.usuario_anterior = usuario_atual
 
 # ==========================================
-# 3. FUNÇÕES CORE (COM ETIQUETA DE AUDITORIA)
+# 3. FUNÇÕES CORE (MOTORES E AUDITORIA ATUALIZADOS)
 # ==========================================
 def registrar_log(usuario, arquivo, periodo):
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -215,25 +216,46 @@ def limpar_nome_produto(nome_bruto):
 def palpite_categoria(nome):
     """
     Retorna a Categoria e um Boolean (is_fallback).
-    True significa que ele não bateu em nenhuma regra e caiu na rede de segurança.
+    True = O item escapou de todas as regras e foi jogado na Mercearia por segurança.
     """
     txt = ''.join(c for c in unicodedata.normalize('NFD', nome) if unicodedata.category(c) != 'Mn').upper()
     
-    # EXCEÇÕES BLINDADAS
+    # 1. EXCEÇÕES BLINDADAS (Itens que têm nome de outras categorias, mas são Mercearia)
     if any(k in txt for k in ["BATATA DOCE", "ITALAKINHO", "DOCE DE LEITE", "ERVADOCE", "ERVA DOCE"]): 
         return "Mercearia", False
         
-    # AS 5 CATEGORIAS OFICIAIS
+    # 2. REGRAS GERAIS DE 4 CATEGORIAS
     if any(k in txt for k in ["CT ", "CIGARRO", "PINE", "TREVO", "ROTHMANS", "LUCKY", "FUMO", "SEDA", "GUNDANG", "GUDANG"]): 
         return "Tabacaria", False
-    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA"]): 
-        return "Bebidas", False
-    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA"]): 
+        
+    # Somente bebidas alcoólicas reais
+    if any(k in txt for k in ["CERV", "HEINEKEN", "VINHO", "PITU", "SKOL", "BRAHMA", "51 ", "VODKA", "LOKAL", "BUDWEISER", "ITAIPAVA", "YPIOCA", "IMPERIO"]): 
+        return "Bebidas Alcoólicas", False
+        
+    if any(k in txt for k in ["TRIDENT", "DOCE", "BOMBOM", "FINI", "HALLS", "CHICLETE", "CHOCOLATE", "JUJUBA", "DADA", "PACOCA", "MOLEQUE", "BALA", "ICEKISS", "MENTOS", "CHICLE", "EMBARE"]): 
         return "Bomboniere", False
+        
     if any(k in txt for k in ["DIPIRONA", "DORFLEX", "AMOXICILINA", "TORSILAX", "ENO"]): 
         return "Remédios", False
+
+    # 3. MERCEARIA EXPLÍCITA (Itens treinados, incluindo bebidas não alcoólicas e sorvetes)
+    mercearia_explicita = [
+        "RACAO", "PAO", "PAES", "COENTRO", "QUEIJO", "LACTEA", "FEIJOADA", "SABAO", "MARGARINA", "MARG ",
+        "MACARRAO", "MAC ", "FARINHA", "PIMENTAO", "LEITE", "OLEO", "CAFE", "OVO", "AMENDOIM", "BATATA",
+        "BOLACHA", "REQUEIJAO", "LINGUICA", "LING ", "MISTURA", "CARNE", "ALHO", "SAZON", "LAMEN", "MIOJO",
+        "NISSIM", "PAPEL", "SARDINHA", "DESINF", "SALSICHA", "BISCOITO", "IOGURTE", "ESCOVA", "LAMINA",
+        "CREME", "EMPANADO", "CEBOLA", "GOMA", "FRANGO", "COXA", "CARANGUEJO", "HAMBURGUER", "MILHO",
+        "AGUA SANIT", "SAL ", "BOTIJAO", "PIPPOS", "SALGADINHO", "MOLHO", "MACAXEIRA", "BISTECA", "BRILHOTEX",
+        "TRELOSO", "LIMPOL", "SABONETE", "REXONA", "AMACIANTE", "CALDO", "FLOCAO", "FLOKAO", "MAIZENA",
+        "ESPONJA", "ESP ", "ACUCAR", "PIPOCA", "ABSORVENTE", "COLORAL", "FIGADO", "DANONE", "PEITO", "WAFER",
+        "BOKUS", "DUMEL", "NATVILLE", "TOMATE", "LIMAO", "ROSQUINHA",
+        "AGUA SCHIN", "KAPO", "REFRESCO", "AGUA MINERAL", "COCA", "AGUA DE COCO", "REFRIGERANTE", "DORE", "CC ORIG", "GUARANA",
+        "SORV", "PICOLE", "CREMOSIN"
+    ]
+    if any(k in txt for k in mercearia_explicita):
+        return "Mercearia", False
         
-    # REDE DE SEGURANÇA (FALLBACK)
+    # 4. REDE DE SEGURANÇA (FALLBACK)
     return "Mercearia", True
 
 def processar_pdf(file):
@@ -269,7 +291,7 @@ def processar_pdf(file):
 
 def gerar_html_interativo(df, periodo, total_geral, nome_arquivo):
     colunas_html = ""
-    categorias_presentes = ["Tabacaria", "Bebidas", "Bomboniere", "Remédios", "Mercearia"]
+    categorias_presentes = ["Tabacaria", "Bebidas Alcoólicas", "Bomboniere", "Remédios", "Mercearia"]
     for i, cat in enumerate(categorias_presentes):
         paleta = CORES_CATEGORIAS.get(cat, {"bg": "rgba(30, 41, 59, 0.7)", "glow": "rgba(51, 65, 85, 0.4)", "border": "#475569"})
         itens_cat = df[df['Cat'] == cat]
@@ -362,7 +384,7 @@ if not st.session_state.get("authentication_status"):
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2: st.image("logo.png", use_container_width=True)
 
-authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v36", "auth_key_v36", expiry_days=30)
+authenticator = stauth.Authenticate(credentials_dict, "canada_bi_v38", "auth_key_v38", expiry_days=30)
 authenticator.login(location='main')
 
 if st.session_state.get("authentication_status"):
@@ -514,14 +536,14 @@ if st.session_state.get("authentication_status"):
 
                 st.markdown("<hr style='border-color:rgba(255,255,255,0.05); margin-top:15px; margin-bottom:20px;'>", unsafe_allow_html=True)
                 
-                # --- PAINEL DE AUDITORIA DE CATEGORIZAÇÃO (Invisível no HTML) ---
+                # --- PAINEL DE AUDITORIA DE CATEGORIZAÇÃO ---
                 with st.expander("🔎 Auditoria do Motor (Itens sem Regra Específica)"):
                     df_fallback = df[df['Fallback'] == True]
                     if not df_fallback.empty:
-                        st.markdown("<p style='color:#94a3b8; font-size:11px;'>Os itens abaixo foram alocados em <b>Mercearia</b> por não acionarem nenhuma palavra-chave das outras categorias. Verifique se algum necessita de uma nova regra.</p>", unsafe_allow_html=True)
+                        st.markdown("<p style='color:#94a3b8; font-size:11px;'>Os itens abaixo foram alocados em <b>Mercearia</b> por não acionarem nenhuma palavra-chave. Verifique se algum necessita de uma nova regra.</p>", unsafe_allow_html=True)
                         st.dataframe(df_fallback[['Nome', 'Valor']], use_container_width=True, hide_index=True)
                     else:
-                        st.success("Todos os itens do relatório foram categorizados por regras explícitas!")
+                        st.success("Perfeito! Todos os itens deste relatório foram reconhecidos e categorizados com sucesso pelas regras oficiais.")
 
     elif pagina == "Gerar Multiplos Relatorios":
         if not config_usuarios[user_logado]["batch_allowed"] and user_logado != "madson":
