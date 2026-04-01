@@ -154,7 +154,7 @@ CORES_CATEGORIAS = {
 }
 
 DEFAULT_CONFIG = {
-    "madson": {"name": "Madson", "password": "084269", "batch_allowed": True, "quota": 999, "trial_end": "2099-12-31"},
+    "madson": {"name": "Madson", "password": "H4ng4020", "batch_allowed": True, "quota": 999, "trial_end": "2099-12-31"},
     "joacildo": {"name": "Joacildo", "password": "canada2026", "batch_allowed": False, "quota": 10, "trial_end": "2026-12-31"},
     "danila": {"name": "Danila", "password": "canada2026", "batch_allowed": False, "quota": 10, "trial_end": "2026-12-31"},
     "manoel": {"name": "Manoel", "password": "canada2026", "batch_allowed": False, "quota": 10, "trial_end": "2026-12-31"}
