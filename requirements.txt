@@ -3,3 +3,4 @@ streamlit-authenticator
 pdfplumber
 pandas
 plotly
+supabase
